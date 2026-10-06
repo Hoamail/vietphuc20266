@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { ArrowLeft, Scale, Share2, Check, ExternalLink, Info, RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Scale,
+  Share2,
+  Check,
+  ExternalLink,
+  Info,
+  RefreshCw,
+  Sparkles,
+  AlertCircle,
+  MapPin,
+  ShoppingBag,
+  X,
+  CheckSquare,
+  Search,
+} from 'lucide-react';
 import {
   getTrangPhucById,
   KB_TRANG_PHUC,
@@ -13,6 +28,7 @@ import {
   formatNguonText,
 } from '../data/kb';
 import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn, OptionGuardianState } from '../types/vietphuc';
+import { KBTrangPhuc } from '../types/kb';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText } from '../components/SourceCitationText';
@@ -57,6 +73,345 @@ function formatWeatherSummary(w: WeatherCondition): string {
   return `${seasonMap[w.season] || w.season} · ${tempMap[w.temperature] || w.temperature} · ${todMap[w.timeOfDay] || w.timeOfDay}`;
 }
 
+function formatHuunhamText(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/hữu nhậm/gi, 'vạt trái phủ ngoài vạt phải')
+    .replace(/tả nhậm/gi, 'vạt phải phủ ngoài vạt trái');
+}
+
+const POPULAR_CITIES = ['Hà Nội', 'TP. Hồ Chí Minh', 'Huế', 'Đà Nẵng', 'Hội An', 'Cần Thơ', 'Hải Phòng'];
+
+const SEARCH_TERMS: Record<string, { cuThe: string; rong: string }> = {
+  ao_ngu_than_tay_chen: { cuThe: 'áo dài ngũ thân', rong: 'cổ phục' },
+  ao_tac: { cuThe: 'áo tấc', rong: 'cổ phục' },
+  ao_giao_linh: { cuThe: 'áo giao lĩnh', rong: 'cổ phục' },
+  ao_tu_than: { cuThe: 'áo tứ thân', rong: 'trang phục truyền thống' },
+  ao_dai_tan_thoi: { cuThe: 'áo dài', rong: 'áo dài' },
+  ao_ba_ba: { cuThe: 'áo bà ba', rong: 'trang phục truyền thống' },
+};
+
+interface RentalSearchModalProps {
+  outfit: KBTrangPhuc;
+  phuongAn: StylistPhuongAn;
+  onClose: () => void;
+}
+
+const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn, onClose }) => {
+  const [city, setCity] = useState('');
+  const [actionType, setActionType] = useState<'thue' | 'mua'>('thue');
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+
+  const toggleCheck = (id: string) => {
+    setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const terms = SEARCH_TERMS[outfit.id] || {
+    cuThe: outfit.ten,
+    rong: 'trang phục truyền thống',
+  };
+
+  const hanhDong = actionType === 'thue' ? 'cho thuê' : 'mua';
+  const cleanCity = city.trim();
+
+  // (a) Search Google Maps: query = `${hanhDong} ${rong} ${cleanCity}`
+  const mapsQuery = `${hanhDong} ${terms.rong}${cleanCity ? ` ${cleanCity}` : ''}`;
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
+
+  // (b) Search Google: query = `${hanhDong} ${cuThe} ${cleanCity}`
+  const googleQuery = `${hanhDong} ${terms.cuThe}${cleanCity ? ` ${cleanCity}` : ''}`;
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(googleQuery)}`;
+
+  const dacDiemList =
+    Array.isArray(outfit.dac_diem_nhan_dien_hinh_anh) && outfit.dac_diem_nhan_dien_hinh_anh.length > 0
+      ? outfit.dac_diem_nhan_dien_hinh_anh
+      : [];
+  const vatLieu = outfit.bo_phan?.vat_lieu ? outfit.bo_phan.vat_lieu : null;
+  const phuKienList =
+    Array.isArray(outfit.phu_kien) && outfit.phu_kien.length > 0 ? outfit.phu_kien : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+      <div className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 text-[#161A1D]">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 border-b border-[#DED7C6] pb-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-5 h-5 text-[#B93826]" />
+            </div>
+            <div>
+              <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D]">
+                Tìm Nơi Thuê / Mua Trang Phục
+              </h3>
+              <p className="text-xs text-[#6C7A87]">
+                Trang phục: <span className="font-semibold text-[#1E3F5A]">{outfit.ten}</span> · {phuongAn.ten}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-[#EFECE3] text-[#7A8691] hover:text-[#161A1D] cursor-pointer transition-colors"
+            title="Đóng"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4 text-xs">
+          {/* Lựa chọn Thuê / Mua */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-[#1E3F5A] uppercase tracking-wider">
+              Nhu cầu của bạn
+            </label>
+            <div className="inline-flex p-1 rounded-xl bg-[#EFECE3] border border-[#DED7C6] gap-1">
+              <button
+                type="button"
+                onClick={() => setActionType('thue')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  actionType === 'thue'
+                    ? 'bg-[#B93826] text-white shadow-2xs'
+                    : 'text-[#52606D] hover:text-[#161A1D]'
+                }`}
+              >
+                Thuê
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionType('mua')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  actionType === 'mua'
+                    ? 'bg-[#B93826] text-white shadow-2xs'
+                    : 'text-[#52606D] hover:text-[#161A1D]'
+                }`}
+              >
+                Mua
+              </button>
+            </div>
+          </div>
+
+          {/* Mục (1): Nhập thành phố/tỉnh của Việt Nam (tự gõ, không dùng định vị) */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-[#1E3F5A] uppercase tracking-wider">
+              1. Nhập thành phố / tỉnh thành (Việt Nam)
+            </label>
+            <div className="relative">
+              <MapPin className="w-4 h-4 text-[#8A95A0] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Ví dụ: Hà Nội, TP. Hồ Chí Minh, Huế, Đà Nẵng..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DED7C6] bg-white text-xs text-[#161A1D] placeholder:text-[#9EA8B3] focus:outline-none focus:ring-2 focus:ring-[#B93826]/30 focus:border-[#B93826]"
+              />
+            </div>
+            {/* Quick chips chọn nhanh */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <span className="text-[11px] text-[#7A8691] py-0.5">Gợi ý nhanh:</span>
+              {POPULAR_CITIES.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCity(c)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                    cleanCity.toLowerCase() === c.toLowerCase()
+                      ? 'bg-[#1E3F5A] text-white border-[#1E3F5A]'
+                      : 'bg-white text-[#52606D] border-[#DED7C6] hover:bg-[#FAF8F5]'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-[#7A8691] italic">
+              * Người dùng tự gõ địa phương mong muốn; hệ thống không sử dụng định vị GPS và không lưu dữ liệu.
+            </p>
+          </div>
+
+          {/* Mục (2): Hai nút "Search Google Maps" và "Search Google" mở tab mới */}
+          <div className="space-y-2 pt-1">
+            <label className="block text-xs font-bold text-[#1E3F5A] uppercase tracking-wider">
+              2. Tìm kiếm điểm may / thuê
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
+              >
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span>Search Google Maps</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80 shrink-0" />
+              </a>
+
+              <a
+                href={googleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 rounded-xl bg-[#1E3F5A] hover:bg-[#12283A] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
+              >
+                <Search className="w-4 h-4 shrink-0" />
+                <span>Search Google</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-80 shrink-0" />
+              </a>
+            </div>
+
+            {/* Hiển thị từ khoá tìm kiếm của từng nút */}
+            <div className="space-y-1 bg-white p-2.5 rounded-lg border border-[#E8E2D8] font-mono text-[11px] text-[#6C7A87] break-all">
+              <div>
+                Maps: <span className="font-semibold text-[#161A1D]">"{mapsQuery}"</span>
+              </div>
+              <div>
+                Google: <span className="font-semibold text-[#161A1D]">"{googleQuery}"</span>
+              </div>
+            </div>
+
+            {/* Mục (4): Khối Mẹo của app */}
+            <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#DED7C6] space-y-1.5 text-[11px]">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-bold text-[#8B5A2B] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#C88E1B]" />
+                  <span>Mẹo của app</span>
+                </span>
+                <span className="text-[10px] text-[#8B5A2B] bg-white px-2 py-0.5 rounded border border-[#C88E1B]/30 font-semibold">
+                  Mẹo tìm kiếm, không phải thông tin văn hoá hay danh sách tiệm
+                </span>
+              </div>
+              <p className="text-[#5A4630] leading-relaxed">
+                Nếu Google Maps không ra kết quả (thường gặp ở trang phục ít phổ biến hoặc ở tỉnh nhỏ), bạn hãy thử nút <strong>"Search Google"</strong>, thử tìm ở thành phố lớn gần nhất, hoặc hỏi tiệm áo dài / cổ phục về đặt may.
+              </p>
+            </div>
+          </div>
+
+          {/* Mục (3): Checklist "Nên hỏi tiệm" lấy từ KB */}
+          <div className="space-y-2.5 pt-2 border-t border-[#DED7C6]">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-bold text-[#1E3F5A] uppercase tracking-wider flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5 text-[#C88E1B]" />
+                <span>3. Checklist nên hỏi tiệm (từ tư liệu KB-v3)</span>
+              </label>
+              <span className="text-[11px] text-[#7A8691]">Bấm để đánh dấu</span>
+            </div>
+            <p className="text-[11px] text-[#52606D]">
+              Đối chiếu kỹ cấu tạo, chất liệu và phụ kiện chuẩn xác khi kiểm tra trang phục tại tiệm:
+            </p>
+
+            {/* Cấu tạo cần có (từ dac_diem_nhan_dien_hinh_anh) */}
+            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-[11px] font-bold text-[#1E3F5A]">
+                • Cấu tạo cần có (Đặc điểm nhận diện hình ảnh):
+              </div>
+              {dacDiemList.length > 0 ? (
+                <div className="space-y-1.5">
+                  {dacDiemList.map((item, idx) => {
+                    const key = `dd_${idx}`;
+                    const isChecked = Boolean(checkedItems[key]);
+                    return (
+                      <label
+                        key={key}
+                        onClick={() => toggleCheck(key)}
+                        className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                        />
+                        <span className={isChecked ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                          {formatHuunhamText(item)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+              )}
+            </div>
+
+            {/* Chất liệu (bo_phan.vat_lieu nếu có) */}
+            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-[11px] font-bold text-[#1E3F5A]">
+                • Chất liệu:
+              </div>
+              {vatLieu ? (
+                <label
+                  onClick={() => toggleCheck('vl_0')}
+                  className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(checkedItems['vl_0'])}
+                    onChange={() => {}}
+                    className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                  />
+                  <span className={checkedItems['vl_0'] ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                    {formatHuunhamText(vatLieu)}
+                  </span>
+                </label>
+              ) : (
+                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+              )}
+            </div>
+
+            {/* Phụ kiện đi kèm (từ phu_kien) */}
+            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-[11px] font-bold text-[#1E3F5A]">
+                • Phụ kiện đi kèm:
+              </div>
+              {phuKienList.length > 0 ? (
+                <div className="space-y-1.5">
+                  {phuKienList.map((item, idx) => {
+                    const key = `pk_${idx}`;
+                    const isChecked = Boolean(checkedItems[key]);
+                    return (
+                      <label
+                        key={key}
+                        onClick={() => toggleCheck(key)}
+                        className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                        />
+                        <span className={isChecked ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                          {formatHuunhamText(item)}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+              )}
+            </div>
+          </div>
+
+          {/* Minh bạch */}
+          <div className="p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E8E2D8] text-[11px] text-[#6C7A87]">
+            Hệ thống không tạo danh sách cửa hàng, không bịa tên tiệm, không gọi API ngoài hay lưu dữ liệu người dùng. Kết quả tìm kiếm mở trực tiếp trên Google Maps hoặc Google; app không biết kết quả có hay không và không lưu dữ liệu.
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-5 pt-3 border-t border-[#DED7C6] flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-[#1E3F5A] text-white text-xs font-medium rounded-lg hover:bg-[#12283A] transition-colors cursor-pointer"
+          >
+            Đóng bảng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ResultScreen: React.FC<ResultScreenProps> = ({
   selectedOutfitId,
   customization,
@@ -68,6 +423,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'styling' | 'anatomy' | 'history'>('styling');
+  const [rentalModalPa, setRentalModalPa] = useState<StylistPhuongAn | null>(null);
 
   // State cho phương án Stylist từ /api/style (giữ kèm exp và token)
   const [phuongAnList, setPhuongAnList] = useState<StylistPhuongAn[]>([]);
@@ -773,6 +1129,21 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                                 ))}
                               </ul>
                             </div>
+
+                            {/* Nút Tìm nơi thuê/mua trên mỗi thẻ phương án (B6b) */}
+                            <div className="pt-2 border-t border-[#EFECE3] flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-[11px] text-[#6C7A87]">
+                                Trải nghiệm thực tế phương án này:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRentalModalPa(pa)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#FAF8F5] border border-[#DED7C6] text-[#1E3F5A] text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <MapPin className="w-3.5 h-3.5 text-[#B93826]" />
+                                <span>Tìm nơi thuê/mua</span>
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -986,6 +1357,15 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal Tìm nơi thuê/mua (B6b) */}
+      {rentalModalPa && (
+        <RentalSearchModal
+          outfit={outfit}
+          phuongAn={rentalModalPa}
+          onClose={() => setRentalModalPa(null)}
+        />
+      )}
     </div>
   );
 };
