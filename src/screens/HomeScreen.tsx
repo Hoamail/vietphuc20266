@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ArrowRight, ShieldCheck, BookOpen, Layers, CheckCircle2 } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, BookOpen, Layers, CheckCircle2, Camera } from 'lucide-react';
 import { getTrangPhucById, KB_NGUON, getLoaiNguonLabel, formatNguonText } from '../data/kb';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
@@ -8,12 +8,14 @@ interface HomeScreenProps {
   onStartRemix: (outfitId?: string) => void;
   onOpenLookbook: () => void;
   onOpenCompare: () => void;
+  onOpenImageGuardian?: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartRemix,
   onOpenLookbook,
   onOpenCompare,
+  onOpenImageGuardian,
 }) => {
   // 3 thẻ nổi bật theo yêu cầu: ao_ngu_than_tay_chen, ao_tac, ao_giao_linh
   const featuredIds = ['ao_ngu_than_tay_chen', 'ao_tac', 'ao_giao_linh'];
@@ -75,6 +77,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             >
               Ma trận so sánh
             </button>
+
+            {onOpenImageGuardian && (
+              <button
+                type="button"
+                onClick={onOpenImageGuardian}
+                className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white backdrop-blur-md text-xs sm:text-sm font-medium rounded-xl transition-colors cursor-pointer border border-white/20 flex items-center gap-1.5"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Kiểm tra ảnh (Vision)</span>
+              </button>
+            )}
           </div>
         </div>
       </section>

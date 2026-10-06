@@ -69,6 +69,16 @@ export interface OptionGuardianState {
   errorMessage?: string;
 }
 
+export interface ImageGuardianResult {
+  khop: boolean;
+  diem_khop: string[];
+  diem_khong_khop: string[];
+  diem_khong_xac_dinh: string[];
+  nhan: GuardianNhan;
+  do_chac_chan: KBMucChacChan;
+  canh_bao_co_dinh: string | null;
+}
+
 export interface SavedLook {
   id: string;
   title: string;

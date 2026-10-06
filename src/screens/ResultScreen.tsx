@@ -14,6 +14,7 @@ import {
   X,
   CheckSquare,
   Search,
+  Camera,
 } from 'lucide-react';
 import {
   getTrangPhucById,
@@ -43,6 +44,7 @@ interface ResultScreenProps {
   isInCompare: boolean;
   onNavigateToLookbook: () => void;
   onNavigateToCompare: () => void;
+  onOpenImageGuardian?: (outfitId: string) => void;
 }
 
 function resolveCitedSources(nguonChiSo: number[] | undefined, nguonList: string[]): string[] {
@@ -420,6 +422,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   onAddToCompare,
   isSavedInLookbook,
   isInCompare,
+  onOpenImageGuardian,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'styling' | 'anatomy' | 'history'>('styling');
@@ -874,6 +877,19 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
             <span>{isSavedInLookbook ? 'Đã lưu Lookbook' : 'Lưu vào Lookbook'}</span>
           </button>
 
+          {/* Kiểm tra ảnh (Image Guardian) */}
+          {onOpenImageGuardian && (
+            <button
+              type="button"
+              onClick={() => onOpenImageGuardian(outfit.id)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border bg-[#1E3F5A] hover:bg-[#163046] text-white shadow-2xs"
+              title="Kiểm tra ảnh trang phục thực tế với Cultural Guardian"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Kiểm tra ảnh</span>
+            </button>
+          )}
+
           {/* Share */}
           <button
             type="button"
@@ -986,6 +1002,33 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               {/* Tab 1: Phương án Stylist & Bối cảnh */}
               {activeTab === 'styling' && (
                 <div className="mt-4 space-y-4">
+                  {/* Banner Kiểm tra ảnh trang phục với Cultural Guardian */}
+                  {onOpenImageGuardian && (
+                    <div className="p-3.5 rounded-xl bg-[#EBF2F7] border border-[#1E3F5A]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-[#1E3F5A] text-white flex items-center justify-center shrink-0">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-[#1E3F5A]">
+                            Kiểm tra ảnh thực tế với Cultural Guardian
+                          </div>
+                          <div className="text-[11px] text-[#4A5560]">
+                            Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn {outfit.ten}.
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onOpenImageGuardian(outfit.id)}
+                        className="px-3 py-1.5 bg-[#1E3F5A] hover:bg-[#163046] text-white text-xs font-medium rounded-lg transition-colors cursor-pointer shrink-0 self-start sm:self-center flex items-center gap-1.5"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Kiểm tra ảnh ngay</span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Khối Phương án phối đồ từ /api/style */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2">

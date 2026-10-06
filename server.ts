@@ -195,11 +195,12 @@ class GeminiCallError extends Error {
 
 async function callGeminiWithTimeout(
   ai: GoogleGenAI,
-  params: GenerateContentParameters
+  params: GenerateContentParameters,
+  timeoutMs: number = GEMINI_TIMEOUT_MS
 ): Promise<GenerateContentResponse> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), GEMINI_TIMEOUT_MS);
+    timer = setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), timeoutMs);
   });
   try {
     return await Promise.race([ai.models.generateContent(params), timeoutPromise]);
@@ -213,11 +214,12 @@ async function callGeminiWithTimeout(
 async function generateWithFallback(
   ai: GoogleGenAI,
   params: Omit<GenerateContentParameters, 'model'>,
-  tag: string
+  tag: string,
+  timeoutMs: number = GEMINI_TIMEOUT_MS
 ): Promise<{ response: GenerateContentResponse; modelUsed: string }> {
   const primaryModel = resolveGeminiModel();
   try {
-    const response = await callGeminiWithTimeout(ai, { ...params, model: primaryModel });
+    const response = await callGeminiWithTimeout(ai, { ...params, model: primaryModel }, timeoutMs);
     return { response, modelUsed: primaryModel };
   } catch (primaryErr: unknown) {
     const fallbackModel = resolveFallbackModel(primaryModel);
@@ -230,7 +232,7 @@ async function generateWithFallback(
       } fallback=${fallbackModel})`
     );
     try {
-      const response = await callGeminiWithTimeout(ai, { ...params, model: fallbackModel });
+      const response = await callGeminiWithTimeout(ai, { ...params, model: fallbackModel }, timeoutMs);
       return { response, modelUsed: fallbackModel };
     } catch (fallbackErr: unknown) {
       throw new GeminiCallError(fallbackErr, fallbackModel);
@@ -350,6 +352,83 @@ function incrementDailyCap(): void {
   } else {
     dailyUsage.count += 1;
   }
+}
+
+// B7: Image Guardian Rate Limiter (3 requests per minute per IP) & Daily Cap (default 100)
+const RATE_LIMIT_IMAGE_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_IMAGE_MAX_REQUESTS = 3;
+const DAILY_CAP_IMAGE = (() => {
+  const parsed = parseInt(process.env.DAILY_CAP_IMAGE || '100', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 100;
+})();
+const GEMINI_IMAGE_TIMEOUT_MS = 45 * 1000; // 45 seconds timeout for multimodal image check
+
+const ipRateLimitsImage = new Map<string, { count: number; resetAt: number }>();
+let dailyImageUsage = {
+  dateKey: new Date().toISOString().slice(0, 10),
+  count: 0,
+};
+
+function checkIpRateLimitImage(ip: string): { allowed: boolean; retryAfterSec: number } {
+  const now = Date.now();
+  if (ipRateLimitsImage.size > 2000) {
+    for (const [key, entry] of ipRateLimitsImage.entries()) {
+      if (now >= entry.resetAt) {
+        ipRateLimitsImage.delete(key);
+      }
+    }
+  }
+
+  const current = ipRateLimitsImage.get(ip);
+  if (!current || now >= current.resetAt) {
+    ipRateLimitsImage.set(ip, { count: 1, resetAt: now + RATE_LIMIT_IMAGE_WINDOW_MS });
+    return { allowed: true, retryAfterSec: 0 };
+  }
+
+  if (current.count >= RATE_LIMIT_IMAGE_MAX_REQUESTS) {
+    const retryAfterSec = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+    return { allowed: false, retryAfterSec };
+  }
+
+  current.count += 1;
+  return { allowed: true, retryAfterSec: 0 };
+}
+
+function checkDailyCapImage(): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (dailyImageUsage.dateKey !== today) {
+    dailyImageUsage = { dateKey: today, count: 0 };
+  }
+  return dailyImageUsage.count < DAILY_CAP_IMAGE;
+}
+
+function incrementDailyCapImage(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  if (dailyImageUsage.dateKey !== today) {
+    dailyImageUsage = { dateKey: today, count: 1 };
+  } else {
+    dailyImageUsage.count += 1;
+  }
+}
+
+function checkImageMagicBytes(buffer: Buffer, mime: string): boolean {
+  if (!buffer || buffer.length < 8) return false;
+  if (mime === 'image/jpeg') {
+    return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+  if (mime === 'image/png') {
+    return (
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0d &&
+      buffer[5] === 0x0a &&
+      buffer[6] === 0x1a &&
+      buffer[7] === 0x0a
+    );
+  }
+  return false;
 }
 
 // Deterministic JSON canonicalization with sorted keys
@@ -628,6 +707,44 @@ function sanitizeGuardianResult(
   };
 }
 
+// B7: Cultural Guardian system instruction & schema for image analysis
+const IMAGE_GUARDIAN_SYSTEM_INSTRUCTION = [
+  'Bạn là Cultural Guardian đọc ảnh. So sánh ẢNH với các đặc điểm trong DỮ LIỆU (dac_diem_nhan_dien_hinh_anh, mo_ta_prompt_anh_en) của đúng trang phục được chỉ định.',
+  '- Đối chiếu từng đặc điểm. Đặc điểm nhìn thấy và khớp → diem_khop. Nhìn thấy và mâu thuẫn rõ → diem_khong_khop. Bị che hoặc không rõ do góc chụp → diem_khong_xac_dinh (không coi là sai).',
+  '- khop = true chỉ khi diem_khong_khop rỗng.',
+  '- nhan: de_sai_lech nếu có điểm mâu thuẫn rõ hoặc trang phục trông như một loại trang phục khác; can_luu_y nếu không có mâu thuẫn nhưng còn điểm không xác định được; hai_hoa nếu mọi đặc điểm đều khớp.',
+  '- Chỉ nói về trang phục. Không nhận diện danh tính, không nhận xét ngoại hình hay cơ thể người trong ảnh.',
+  '- Không suy diễn ngoài dữ liệu.',
+].join('\n');
+
+const IMAGE_GUARDIAN_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    khop: { type: Type.BOOLEAN },
+    diem_khop: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    diem_khong_khop: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    diem_khong_xac_dinh: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    nhan: {
+      type: Type.STRING,
+      enum: ['hai_hoa', 'can_luu_y', 'de_sai_lech'],
+    },
+    do_chac_chan: {
+      type: Type.STRING,
+      enum: ['cao', 'trung_binh', 'thap'],
+    },
+  },
+  required: ['khop', 'diem_khop', 'diem_khong_khop', 'diem_khong_xac_dinh', 'nhan', 'do_chac_chan'],
+};
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
@@ -660,19 +777,28 @@ async function startServer() {
     next();
   });
 
-  // Strict 100kb JSON body limit
-  app.use(express.json({ limit: '100kb', strict: true }));
+  // B7: Body limit riêng cho /api/guard-image (khoảng 6MB), các route khác giữ 100KB
+  const jsonParserSmall = express.json({ limit: '100kb', strict: true });
+  const jsonParserLarge = express.json({ limit: '6mb', strict: true });
+
+  app.use((req, res, next) => {
+    if (req.path === '/api/guard-image') {
+      return jsonParserLarge(req, res, next);
+    }
+    return jsonParserSmall(req, res, next);
+  });
 
   // Handle body parser errors (413 Payload Too Large / 400 Invalid JSON)
-  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (err) {
       const status = err.type === 'entity.too.large' ? 413 : 400;
+      const limitText = req.path === '/api/guard-image' ? '6MB' : '100KB';
       return res.status(status).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
         message:
           status === 413
-            ? 'Chưa kiểm tra được (kích thước dữ liệu vượt quá giới hạn 100KB).'
+            ? `Chưa kiểm tra được (kích thước dữ liệu vượt quá giới hạn ${limitText}).`
             : 'Chưa kiểm tra được (định dạng JSON không hợp lệ).',
       });
     }
@@ -1683,6 +1809,269 @@ async function startServer() {
         error: 'chua_kiem_tra_duoc',
         reason: isQuotaExhausted ? 'quota' : 'service_error',
         message: 'Chưa kiểm tra được',
+      });
+    }
+  }));
+
+  // B7: Image Cultural Guardian endpoint
+  app.post('/api/guard-image', safeAsyncRoute(async (req, res) => {
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+    const rateStatus = checkIpRateLimitImage(clientIp);
+    if (!rateStatus.allowed) {
+      res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
+      return res.status(429).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (vượt quá giới hạn 3 yêu cầu/phút cho kiểm tra ảnh, vui lòng thử lại sau).',
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (dữ liệu đầu vào không hợp lệ).',
+      });
+    }
+
+    const { outfitId, imageBase64, mimeType } = req.body;
+
+    if (!isValidShortString(outfitId) || !kbOutfitsMap.has(outfitId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (mã trang phục không hợp lệ hoặc không có trong KB).',
+      });
+    }
+
+    if (mimeType !== 'image/jpeg' && mimeType !== 'image/png') {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (chỉ chấp nhận ảnh định dạng JPG hoặc PNG).',
+      });
+    }
+
+    if (typeof imageBase64 !== 'string' || !imageBase64.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (thiếu dữ liệu ảnh).',
+      });
+    }
+
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '').trim();
+    let imgBuffer: Buffer;
+    try {
+      imgBuffer = Buffer.from(cleanBase64, 'base64');
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (dữ liệu base64 không hợp lệ).',
+      });
+    }
+
+    if (imgBuffer.length === 0 || imgBuffer.length > 4 * 1024 * 1024) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (kích thước ảnh tối đa 4MB).',
+      });
+    }
+
+    if (!checkImageMagicBytes(imgBuffer, mimeType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (dấu hiệu tệp không đúng định dạng JPG hoặc PNG).',
+      });
+    }
+
+    if (!checkDailyCapImage()) {
+      return res.status(429).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Hệ thống đã đạt giới hạn kiểm tra ảnh hôm nay',
+      });
+    }
+
+    const { hasValidKey, ai } = getGeminiContext();
+    if (!hasValidKey || !ai) {
+      return res.status(503).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        reason: 'no_key',
+        message: 'Chưa kiểm tra được (hệ thống chưa cấu hình API key).',
+      });
+    }
+
+    const kbOutfit = kbOutfitsMap.get(outfitId)!;
+
+    const imagePromptText = [
+      '=== DỮ LIỆU TRANG PHỤC CẦN ĐỐI CHIẾU TỪ KB-v3 ===',
+      `- Mã trang phục: ${kbOutfit.id}`,
+      `- Tên trang phục: ${kbOutfit.ten}`,
+      `- Thời kỳ: ${kbOutfit.thoi_ky || 'Chưa có nguồn'}`,
+      `- Mức chắc chắn tư liệu KB: ${kbOutfit.muc_chac_chan}`,
+      '- Đặc điểm nhận diện hình ảnh từ tư liệu:',
+      ...(Array.isArray(kbOutfit.dac_diem_nhan_dien_hinh_anh) && kbOutfit.dac_diem_nhan_dien_hinh_anh.length > 0
+        ? kbOutfit.dac_diem_nhan_dien_hinh_anh.map((d: string) => `  + ${d}`)
+        : ['  + Chưa có nguồn']),
+      `- Mô tả hình ảnh chuẩn (English Reference): ${kbOutfit.mo_ta_prompt_anh_en || 'Chưa có nguồn'}`,
+      ...(Array.isArray(kbOutfit.tranh_nham_voi) && kbOutfit.tranh_nham_voi.length > 0
+        ? [
+            '- Các dạng trang phục dễ nhầm lẫn cần lưu ý tránh:',
+            ...kbOutfit.tranh_nham_voi.map((t: any) => `  + Dễ nhầm với ${t.ten}: ${t.diem_khac_biet || ''}`),
+          ]
+        : []),
+      '',
+      'Hãy đối chiếu kỹ từng đặc điểm trang phục trong ảnh với dữ liệu trên và trả về kết quả JSON theo đúng schema.',
+    ].join('\n');
+
+    incrementDailyCapImage();
+
+    let modelName = resolveGeminiModel();
+
+    try {
+      const { response, modelUsed } = await generateWithFallback(
+        ai,
+        {
+          contents: [
+            {
+              inlineData: {
+                mimeType,
+                data: cleanBase64,
+              },
+            },
+            imagePromptText,
+          ],
+          config: {
+            systemInstruction: IMAGE_GUARDIAN_SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseSchema: IMAGE_GUARDIAN_RESPONSE_SCHEMA,
+            temperature: 0.2,
+            maxOutputTokens: 4096,
+          },
+        },
+        'ImageGuardian',
+        GEMINI_IMAGE_TIMEOUT_MS
+      );
+      modelName = modelUsed;
+
+      const rawText = typeof response?.text === 'string' ? response.text.trim() : '';
+      if (!rawText) {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          reason: 'empty_response',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      const startIdx = cleaned.indexOf('{');
+      const endIdx = cleaned.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleaned = cleaned.slice(startIdx, endIdx + 1);
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          reason: 'bad_json_format',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      const cleanList = (arr: any): string[] => {
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .filter((x): x is string => typeof x === 'string' && Boolean(x.trim()))
+          .map((x) => sanitizeTextConstraints(x));
+      };
+
+      const diemKhop = cleanList(parsed.diem_khop);
+      const diemKhongKhop = cleanList(parsed.diem_khong_khop);
+      const diemKhongXacDinh = cleanList(parsed.diem_khong_xac_dinh);
+
+      // khop = true chỉ khi diem_khong_khop rỗng
+      const khop = Boolean(parsed.khop) && diemKhongKhop.length === 0;
+
+      // nhan: de_sai_lech nếu có mâu thuẫn rõ; can_luu_y nếu còn điểm không xác định; hai_hoa nếu mọi đặc điểm đều khớp
+      let nhan: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech' = 'can_luu_y';
+      if (diemKhongKhop.length > 0) {
+        nhan = 'de_sai_lech';
+      } else if (diemKhongXacDinh.length > 0) {
+        nhan = 'can_luu_y';
+      } else if (diemKhop.length > 0) {
+        nhan = 'hai_hoa';
+      }
+
+      // Luật 3: Trần mức chắc chắn theo KB
+      const CERTAINTY_LEVELS: Record<string, number> = { thap: 1, trung_binh: 2, cao: 3 };
+      let doChacChan: 'cao' | 'trung_binh' | 'thap' =
+        parsed.do_chac_chan === 'cao' || parsed.do_chac_chan === 'thap'
+          ? parsed.do_chac_chan
+          : 'trung_binh';
+
+      const kbLevel = CERTAINTY_LEVELS[kbOutfit.muc_chac_chan] || 2;
+      const aiLevel = CERTAINTY_LEVELS[doChacChan] || 2;
+      if (aiLevel > kbLevel) {
+        doChacChan = kbOutfit.muc_chac_chan as 'cao' | 'trung_binh' | 'thap';
+      }
+
+      // Luật 4: Áo giao lĩnh luôn kèm cảnh báo cố định
+      let canhBaoCoDinh: string | null = null;
+      if (kbOutfit.id === 'ao_giao_linh') {
+        canhBaoCoDinh =
+          'Lưu ý: Áo giao lĩnh có phom dáng cổ chéo, buộc dây tương đồng với một số trang phục cổ Đông Á khác. Chú ý vạt áo trái phải đè lên ngoài vạt phải (không mặc ngược vạt).';
+      }
+
+      return res.json({
+        success: true,
+        result: {
+          khop,
+          diem_khop: diemKhop,
+          diem_khong_khop: diemKhongKhop,
+          diem_khong_xac_dinh: diemKhongXacDinh,
+          nhan,
+          do_chac_chan: doChacChan,
+          canh_bao_co_dinh: canhBaoCoDinh,
+        },
+      });
+    } catch (err: any) {
+      if (err instanceof GeminiCallError) modelName = err.modelTried;
+      const statusNum =
+        typeof err?.status === 'number'
+          ? err.status
+          : typeof err?.code === 'number'
+          ? err.code
+          : undefined;
+      const errMsgRaw = typeof err?.message === 'string' ? err.message : String(err ?? '');
+      const safeMsg = errMsgRaw.replace(/[\r\n]+/g, ' ').slice(0, 200);
+
+      // Single-line console.log (NO image, NO base64, NO prompt, NO user data)
+      console.log(`[ImageGuardian Diag] model=${modelName} status=${statusNum ?? 'none'} message=${safeMsg}`);
+
+      const isQuotaExhausted =
+        statusNum === 429 ||
+        errMsgRaw.includes('429') ||
+        errMsgRaw.includes('Resource has been exhausted') ||
+        errMsgRaw.includes('quota') ||
+        err?.error?.code === 429;
+
+      return res.status(isQuotaExhausted ? 429 : 503).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        reason: isQuotaExhausted ? 'quota' : 'service_error',
+        message: isQuotaExhausted
+          ? 'Chưa kiểm tra được (Hệ thống AI đang quá tải / đạt hạn mức, vui lòng thử lại sau)'
+          : 'Chưa kiểm tra được',
       });
     }
   }));

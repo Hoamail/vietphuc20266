@@ -106,6 +106,16 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             )}
           </button>
+          <button
+            onClick={() => onNavigate('image-guardian')}
+            className={`cursor-pointer transition-colors hover:text-[#161A1D] pb-0.5 ${
+              currentTab === 'image-guardian'
+                ? 'text-[#1E3F5A] font-semibold border-b-2 border-[#1E3F5A]'
+                : ''
+            }`}
+          >
+            Kiểm tra ảnh
+          </button>
         </nav>
 
         {/* Zone 3: API Health Indicator & Primary action */}

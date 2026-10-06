@@ -7,12 +7,13 @@ import { CustomizeScreen } from './screens/CustomizeScreen';
 import { ResultScreen } from './screens/ResultScreen';
 import { CompareScreen } from './screens/CompareScreen';
 import { LookbookScreen } from './screens/LookbookScreen';
+import { ImageGuardianScreen } from './screens/ImageGuardianScreen';
 import { LoadingState, ErrorState } from './components/StatesFeedback';
 import { RemixCustomization, SavedLook } from './types/vietphuc';
 
 export function App() {
   // Navigation State
-  const [currentTab, setCurrentTab] = useState<'home' | 'select' | 'customize' | 'result' | 'compare' | 'lookbook'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'select' | 'customize' | 'result' | 'compare' | 'lookbook' | 'image-guardian'>('home');
   
   // Selected Outfit State
   const [selectedOutfitId, setSelectedOutfitId] = useState<string>('ao_ngu_than_tay_chen');
@@ -158,6 +159,7 @@ export function App() {
                 onStartRemix={handleStartRemix}
                 onOpenLookbook={() => setCurrentTab('lookbook')}
                 onOpenCompare={() => setCurrentTab('compare')}
+                onOpenImageGuardian={() => setCurrentTab('image-guardian')}
               />
             )}
 
@@ -202,6 +204,11 @@ export function App() {
                 isInCompare={compareOutfitIds.includes(selectedOutfitId)}
                 onNavigateToLookbook={() => setCurrentTab('lookbook')}
                 onNavigateToCompare={() => setCurrentTab('compare')}
+                onOpenImageGuardian={(outfitId) => {
+                  if (outfitId) setSelectedOutfitId(outfitId);
+                  setCurrentTab('image-guardian');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               />
             )}
 
@@ -224,6 +231,21 @@ export function App() {
                 onDeleteLook={handleDeleteLook}
                 onStartRemix={() => handleStartRemix()}
                 onRemixLook={handleRemixLook}
+              />
+            )}
+
+            {currentTab === 'image-guardian' && (
+              <ImageGuardianScreen
+                initialOutfitId={selectedOutfitId}
+                onBack={() => {
+                  setCurrentTab('home');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onSelectOutfitForRemix={(id) => {
+                  setSelectedOutfitId(id);
+                  setCurrentTab('customize');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               />
             )}
           </>
