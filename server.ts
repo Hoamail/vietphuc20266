@@ -595,6 +595,7 @@ async function startServer() {
       return res.status(503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
+        reason: 'missing_key',
         message: 'Chưa kiểm tra được',
       });
     }
@@ -751,9 +752,9 @@ async function startServer() {
 
     incrementDailyCap();
 
-    try {
-      const modelName = resolveGeminiModel();
+    const modelName = resolveGeminiModel();
 
+    try {
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
@@ -770,6 +771,7 @@ async function startServer() {
             responseMimeType: 'application/json',
             responseSchema: STYLIST_RESPONSE_SCHEMA,
             temperature: 0.4,
+            maxOutputTokens: 8192,
           },
         }),
         timeoutPromise,
@@ -782,17 +784,34 @@ async function startServer() {
         return res.status(503).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
+          reason: 'empty_response',
           message: 'Chưa kiểm tra được',
         });
       }
 
+      const finishReason = String(response?.candidates?.[0]?.finishReason ?? '');
+
+      // Bỏ hàng rào markdown và chỉ lấy đoạn từ "{" đầu đến "}" cuối
+      let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      const startIdx = cleaned.indexOf('{');
+      const endIdx = cleaned.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleaned = cleaned.slice(startIdx, endIdx + 1);
+      }
+
       let parsedJson: any;
       try {
-        parsedJson = JSON.parse(rawText);
+        parsedJson = JSON.parse(cleaned);
       } catch {
+        console.log(
+          `[Stylist] parse fail model=${modelName} finish=${finishReason} len=${rawText.length} head=${JSON.stringify(
+            rawText.slice(0, 150)
+          )} tail=${JSON.stringify(rawText.slice(-150))}`
+        );
         return res.status(503).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
+          reason: finishReason === 'MAX_TOKENS' ? 'bad_json_truncated' : 'bad_json_format',
           message: 'Chưa kiểm tra được',
         });
       }
@@ -801,6 +820,7 @@ async function startServer() {
         return res.status(503).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
+          reason: 'bad_schema',
           message: 'Chưa kiểm tra được',
         });
       }
@@ -824,6 +844,7 @@ async function startServer() {
           return res.status(503).json({
             success: false,
             error: 'chua_kiem_tra_duoc',
+            reason: 'bad_item',
             message: 'Chưa kiểm tra được',
           });
         }
@@ -840,6 +861,7 @@ async function startServer() {
           return res.status(503).json({
             success: false,
             error: 'chua_kiem_tra_duoc',
+            reason: 'bad_item',
             message: 'Chưa kiểm tra được',
           });
         }
@@ -886,11 +908,36 @@ async function startServer() {
         success: true,
         phuong_an: signedPhuongAn,
       });
-    } catch {
-      // Return honest 503 error state without logging sensitive details or triggering console error overlay
+    } catch (err: any) {
+      const statusNum =
+        typeof err?.status === 'number'
+          ? err.status
+          : typeof err?.code === 'number'
+          ? err.code
+          : undefined;
+      const errMsgRaw = typeof err?.message === 'string' ? err.message : String(err ?? '');
+      const safeMsg = errMsgRaw.replace(/[\r\n]+/g, ' ').slice(0, 200);
+
+      // Single-line console.log (no console.warn/console.error, no API key/prompt/user data)
+      console.log(`[Stylist Diag] model=${modelName} status=${statusNum ?? 'none'} message=${safeMsg}`);
+
+      let reason = 'unknown';
+      if (errMsgRaw === 'GEMINI_TIMEOUT' || err?.name === 'AbortError') {
+        reason = 'timeout';
+      } else if (statusNum === 404) {
+        reason = 'model_not_found';
+      } else if (statusNum === 401 || statusNum === 403) {
+        reason = 'permission';
+      } else if (statusNum === 429) {
+        reason = 'quota';
+      } else if (typeof statusNum === 'number') {
+        reason = `http_${statusNum}`;
+      }
+
       return res.status(503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
+        reason,
         message: 'Chưa kiểm tra được',
       });
     }

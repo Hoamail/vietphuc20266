@@ -73,6 +73,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const [phuongAnList, setPhuongAnList] = useState<StylistPhuongAn[]>([]);
   const [isLoadingStyle, setIsLoadingStyle] = useState<boolean>(true);
   const [styleError, setStyleError] = useState<string | null>(null);
+  const [styleErrorReason, setStyleErrorReason] = useState<string | null>(null);
   const lastFetchedKeyRef = useRef<string | null>(null);
 
   const outfit = getTrangPhucById(selectedOutfitId) || KB_TRANG_PHUC[0];
@@ -101,6 +102,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const fetchStyleOptions = useCallback(async () => {
     setIsLoadingStyle(true);
     setStyleError(null);
+    setStyleErrorReason(null);
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 31000);
@@ -121,6 +123,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       } catch {
         setPhuongAnList([]);
         setStyleError('Chưa kiểm tra được');
+        setStyleErrorReason('bad_json');
         setIsLoadingStyle(false);
         return;
       }
@@ -138,17 +141,24 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         } else {
           setStyleError('Chưa kiểm tra được');
         }
+        setStyleErrorReason(
+          typeof data?.reason === 'string' && data.reason.trim()
+            ? data.reason.trim()
+            : `http_${res.status}`
+        );
         setIsLoadingStyle(false);
         return;
       }
 
       setPhuongAnList(data.phuong_an as StylistPhuongAn[]);
       setStyleError(null);
+      setStyleErrorReason(null);
       setIsLoadingStyle(false);
-    } catch {
+    } catch (err: any) {
       window.clearTimeout(timeoutId);
       setPhuongAnList([]);
       setStyleError('Chưa kiểm tra được');
+      setStyleErrorReason(err?.name === 'AbortError' ? 'timeout' : 'network');
       setIsLoadingStyle(false);
     }
   }, [requestKey]);
@@ -501,6 +511,11 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                             <div className="text-xs font-bold text-[#8E2516]">
                               {styleError}
                             </div>
+                            {styleErrorReason && (
+                              <div className="text-[10px] font-mono text-[#8E2516]/80 mt-0.5">
+                                Mã lỗi: {styleErrorReason}
+                              </div>
+                            )}
                             <p className="text-[11px] text-[#78261A] mt-0.5">
                               Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn lấy trực tiếp từ KB-v3.
                             </p>
