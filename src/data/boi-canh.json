@@ -1,0 +1,181 @@
+[
+  {
+    "id": "di_chua_noi_ton_nghiem",
+    "ten": "Đi Chùa / Nơi Tôn Nghiêm",
+    "tinh_than": "Thanh tịnh, trang nghiêm. Thể hiện sự tôn trọng, thành kính với các bậc thánh thần và không gian tu học.",
+    "nen_uu_tien": [
+      {
+        "trang_phuc_id": "ao_ngu_than_tay_chen",
+        "ly_do": "Thiết kế kín cổ, cổ đứng cao, form dáng suông rộng lịch sự, phù hợp với sự trang nghiêm của nơi thờ tự."
+      },
+      {
+        "trang_phuc_id": "ao_ba_ba",
+        "ly_do": "Gần gũi với phong cách áo lam/áo tràng truyền thống, gọn gàng và thuận tiện cho việc hành lễ."
+      }
+    ],
+    "luu_y": [
+      {
+        "noi_dung": "Đây là thông lệ lịch sự phổ biến: cần ăn mặc kín đáo, tránh áo sát nách, quần lửng hay váy ngắn.",
+        "loai": "thong_le_ung_xu",
+        "nguon_chi_so": [0]
+      },
+      {
+        "noi_dung": "Tránh các trang phục có màu sắc quá sặc sỡ (như đỏ, cam, xanh chuối) gây mất tập trung trong không gian thanh tịnh.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0]
+      },
+      {
+        "noi_dung": "Đề cao sự sạch sẽ, lịch sự và thuận tiện cho việc quỳ lạy, không yêu cầu trang phục đắt tiền.",
+        "loai": "thong_le_ung_xu",
+        "nguon_chi_so": [1]
+      }
+    ],
+    "muc_remix": "truyen_thong",
+    "muc_remix_ghi_chu": "Nên giữ nguyên bản, hạn chế tối đa việc cách tân hở bạo hoặc phối phụ kiện rườm rà.",
+    "muc_chac_chan": "trung_binh",
+    "nguon": [
+      "https://phatgiao.org.vn/di-le-chua-le-phat-the-nao-cho-dung-khong-phai-ai-cung-biet-d39375.html",
+      "https://phatgiao.org.vn/di-chua-mac-gi-cho-trang-nghiem-d104029.html"
+    ]
+  },
+  {
+    "id": "chup_ky_yeu",
+    "ten": "Chụp Ảnh Kỷ Yếu",
+    "tinh_than": "Sáng tạo, lưu giữ kỷ niệm thanh xuân, tôn vinh niềm tự hào văn hóa dân tộc của học sinh/sinh viên.",
+    "nen_uu_tien": [
+      {
+        "trang_phuc_id": "ao_dai_tan_thoi",
+        "ly_do": "Trang phục quốc dân, gắn liền với hình ảnh nữ sinh Việt Nam."
+      },
+      {
+        "trang_phuc_id": "ao_ngu_than_tay_chen",
+        "ly_do": "Mang nét hoài cổ, đang là trào lưu mạnh mẽ trong giới trẻ khi muốn tìm về cội nguồn."
+      }
+    ],
+    "luu_y": [
+      {
+        "noi_dung": "Việc mặc cổ phục chụp kỷ yếu kết hợp tham quan các di tích lịch sử hoặc đi du lịch đang là xu hướng được yêu thích.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0]
+      },
+      {
+        "noi_dung": "Không có quy định cứng nhắc, điều quan trọng nhất là sự thống nhất concept và kỷ niệm của cả tập thể lớp thay vì chỉ tập trung lộng lẫy cá nhân.",
+        "loai": "tham_my",
+        "nguon_chi_so": [1]
+      }
+    ],
+    "muc_remix": "cach_tan_nhe",
+    "muc_remix_ghi_chu": "Có thể thoải mái kết hợp với phong cách trang điểm hiện đại, hoa cầm tay học trò.",
+    "muc_chac_chan": "trung_binh",
+    "nguon": [
+      "https://thanhnien.vn/chup-anh-ky-yeu-cuc-chat-1851062807.htm",
+      "https://chuabavang.com/nhung-dieu-dac-biet-khi-chup-anh-ky-yeu-tai-chua-ba-vang-d849.html"
+    ]
+  },
+  {
+    "id": "tet_le_hoi",
+    "ten": "Dịp Tết / Lễ Hội",
+    "tinh_than": "Vui tươi, rực rỡ sắc xuân. Lan tỏa và phục dựng không khí văn hóa dân gian truyền thống.",
+    "nen_uu_tien": [
+      {
+        "trang_phuc_id": "ao_tac",
+        "ly_do": "Mang tính trang trọng, phù hợp cho các sự kiện rước lễ, tế lễ đầu năm."
+      },
+      {
+        "trang_phuc_id": "ao_giao_linh",
+        "ly_do": "Dáng vẻ cổ kính, đậm chất điện ảnh cổ trang, hợp không khí lễ hội."
+      },
+      {
+        "trang_phuc_id": "ao_dai_tan_thoi",
+        "ly_do": "Sự lựa chọn an toàn, phổ biến nhất để du xuân chụp ảnh."
+      }
+    ],
+    "luu_y": [
+      {
+        "noi_dung": "Nên chọn các màu sắc tươi sáng mang ý nghĩa sinh khí đầu năm như xanh da trời, xanh mạ non, hồng phấn, đỏ.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0]
+      },
+      {
+        "noi_dung": "Việc mặc trang phục truyền thống đi qua các khu phố cổ, di tích lịch sử giúp quảng bá du lịch và bảo tồn bản sắc văn hóa mạnh mẽ.",
+        "loai": "tham_my",
+        "nguon_chi_so": [1]
+      }
+    ],
+    "muc_remix": "cach_tan_nhe",
+    "muc_remix_ghi_chu": "Khuyến khích màu sắc tươi sáng, tự do phối phụ kiện như nón, quạt dạo xuân.",
+    "muc_chac_chan": "trung_binh",
+    "nguon": [
+      "https://tuoitre.vn/ao-dai-xanh-da-troi-xanh-ma-non-hong-phan-du-doan-len-ngoi-20260116185131517.htm",
+      "https://laodong.vn/du-lich/tin-tuc/hang-tram-nguoi-mac-co-phuc-ruoc-le-tai-hien-tet-ha-noi-xua-1452260.html"
+    ]
+  },
+  {
+    "id": "cuoi_le_truyen_thong",
+    "ten": "Cưới Hỏi / Lễ Truyền Thống",
+    "tinh_than": "Trang trọng, thiêng liêng, tôn vinh vẻ đẹp gia phong và tính thẩm mỹ Á Đông quý phái.",
+    "nen_uu_tien": [
+      {
+        "trang_phuc_id": "ao_tac",
+        "ly_do": "Đang là xu hướng mạnh mẽ mang lại vẻ uy nghi, quyền quý cho cô dâu chú rể."
+      },
+      {
+        "trang_phuc_id": "ao_dai_tan_thoi",
+        "ly_do": "Thiết kế tôn dáng, thanh lịch, quen thuộc với mọi gia đình Việt."
+      }
+    ],
+    "luu_y": [
+      {
+        "noi_dung": "Sử dụng cổ phục Việt (như áo tấc) trong các nghi lễ cưới hỏi như lễ Hằng thuận, ăn hỏi đang trở thành xu hướng tôn lên vẻ sang trọng, quý phái.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0, 1]
+      },
+      {
+        "noi_dung": "Trang phục cưới thường chọn các màu sắc rực rỡ (như đỏ, vàng tươi) hoặc trầm ấm với họa tiết thêu tỉ mỉ, nhẹ nhàng.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0]
+      }
+    ],
+    "muc_remix": "truyen_thong",
+    "muc_remix_ghi_chu": "Nên giữ nguyên chuẩn mực form dáng để đảm bảo tính trang nghiêm của nghi lễ gia đình.",
+    "muc_chac_chan": "trung_binh",
+    "nguon": [
+      "https://laodong.vn/gia-dinh-hon-nhan/a-hau-phuong-nhi-va-y-nghia-trong-trang-phuc-le-hang-thuan-1645145.ldo",
+      "https://laodong.vn/van-hoa-giai-tri/co-phuc-viet-trong-dam-cuoi-hien-dai-1421899.ldo"
+    ]
+  },
+  {
+    "id": "di_choi_dao_pho",
+    "ten": "Đi Chơi / Dạo Phố",
+    "tinh_than": "Năng động, tự tin, mang hơi thở văn hóa dân tộc vào nhịp sống thường nhật một cách tự nhiên.",
+    "nen_uu_tien": [
+      {
+        "trang_phuc_id": "ao_ngu_than_tay_chen",
+        "ly_do": "Gọn gàng, dễ dàng di chuyển, không bị vướng víu trên phố."
+      },
+      {
+        "trang_phuc_id": "ao_tu_than",
+        "ly_do": "Nhiều lớp layer đẹp mắt, trẻ trung, cá tính khi lên ảnh."
+      }
+    ],
+    "luu_y": [
+      {
+        "noi_dung": "Mặc cổ phục dạo phố đi bộ hay các địa danh nổi tiếng giúp thu hút sự chú ý tích cực, quảng bá văn hóa Việt Nam đến du khách quốc tế.",
+        "loai": "tham_my",
+        "nguon_chi_so": [0]
+      },
+      {
+        "noi_dung": "Giới trẻ ngày nay rất sáng tạo, thích cách tân và ứng dụng cổ phục vào đời sống để tạo ra những phong cách mới mẻ, mang đậm dấu ấn cá nhân.",
+        "loai": "tham_my",
+        "nguon_chi_so": [1]
+      }
+    ],
+    "muc_remix": "remix_streetwear",
+    "muc_remix_ghi_chu": "Tự do sáng tạo phối cùng sneakers, quần jeans, kính râm hoặc phụ kiện thời trang hiện đại.",
+    "muc_chac_chan": "trung_binh",
+    "nguon": [
+      "https://tuoitre.vn/du-khach-thich-thu-chiem-nguong-co-phuc-viet-tren-pho-di-bo-ho-guom-20231028190227329.htm",
+      "https://thanhnien.vn/net-dep-viet-phuc-tu-co-chi-kim-qua-cach-tan-cua-nguoi-tre-1851496685.htm"
+    ]
+  }
+]

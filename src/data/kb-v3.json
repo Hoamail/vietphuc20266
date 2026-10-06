@@ -1,0 +1,441 @@
+{
+  "phien_ban": "v3",
+  "ghi_chu": "loai trong nguon là đề xuất tự phân loại, cần người dùng xác nhận. goi_y_phoi_do là gợi ý của app, không phải sự thật lịch sử.",
+  "nguon": {
+    "VOV": {
+      "ten": "VOV - Áo dài ngũ thân nam",
+      "url": "https://vov.vn/emagazine/ao-dai-ngu-than-nam-774160.vov",
+      "loai": "bao_chi_nha_nuoc"
+    },
+    "BB": {
+      "ten": "BBCosplay - Áo tấc, sự hồi sinh của cổ phục Việt Nam",
+      "url": "https://bbcosplay.com/news/ao-tac-su-hoi-sinh-cua-co-phuc-viet-nam-3912",
+      "loai": "thuong_mai"
+    },
+    "VJ": {
+      "ten": "VietJack - câu hỏi về áo tứ thân và áo năm thân",
+      "url": "https://khoahoc.vietjack.com/question/2280993/0-5-diem-phu-nu-viet-nam-xua-thuong-mac-ao-loi-mo-ba-mo-bay-vay-mac-ao",
+      "loai": "tai_lieu_hoc_sinh"
+    },
+    "SOI": {
+      "ten": "Soi.today - Áo dài Việt: từ năm thân tới hai thân (Trịnh Bách, 10/03/2015)",
+      "url": "https://soi.today/?p=169649",
+      "loai": "tap_chi_van_hoa_doc_lap"
+    },
+    "GN": {
+      "ten": "Gạo Nâu - Ý nghĩa trang phục truyền thống Việt Nam",
+      "url": "https://gaonau.com/vi/blog/y-nghia-trang-phuc-truyen-thong-viet-nam",
+      "loai": "chua_xac_dinh"
+    },
+    "VHVN": {
+      "ten": "vanhoavn.blog - Tìm hiểu về áo giao lĩnh",
+      "url": "https://vanhoavn.blog/tim-hieu-ve-ao-giao-linh/",
+      "loai": "blog"
+    },
+    "A1": {
+      "ten": "Tạp chí Đông Nam Á - Áo dài Việt Nam qua các thời kỳ lịch sử",
+      "url": "https://tapchidongnama.vn/ao-dai-viet-nam-qua-cac-thoi-ky-lich-su-mot-trien-lam-khong-the-bo-qua/",
+      "loai": "tap_chi"
+    },
+    "A2": {
+      "ten": "Báo Hà Tĩnh - Tuần lễ áo dài 2024",
+      "url": "https://baohatinh.vn/tuan-le-ao-dai-2024-ao-dai-niem-tu-hao-van-hoa-viet-post262566.html",
+      "loai": "bao_chi"
+    },
+    "A3": {
+      "ten": "Thông tấn xã Việt Nam (EN) - Ao dai, the identity of Vietnamese culture",
+      "url": "https://vietnam.vnanet.vn/english/ao-dai-the-identity-of-vietnamese-culture/478378.html",
+      "loai": "bao_chi_nha_nuoc"
+    },
+    "A4": {
+      "ten": "vanhoavn.blog - Áo dài Lê Phổ",
+      "url": "https://vanhoavn.blog/ao-dai-le-pho/",
+      "loai": "blog"
+    },
+    "A5": {
+      "ten": "Trung tâm Nghiên cứu Mỹ-Việt, ĐH Oregon - The Vietnamese Ao Dai in a Time of War",
+      "url": "https://usvietnamcenter.uoregon.edu/the-vietnamese-ao-dai-in-a-time-of-war-fashion-citizenship-and-nationalism-1954-1975-fall-2025/",
+      "loai": "co_quan_nghien_cuu"
+    },
+    "B1": {
+      "ten": "vanhoavn.blog - Áo bà ba",
+      "url": "https://vanhoavn.blog/ao-ba-ba/",
+      "loai": "blog"
+    },
+    "B2": {
+      "ten": "Báo Nhân Dân - Áo bà ba, nét đẹp của nữ du kích (chỉ là chú thích ảnh)",
+      "url": "https://nhandan.vn/anh-ao-ba-ba-net-dep-cua-nu-du-kich-trong-khang-chien-post909781.html",
+      "loai": "bao_chi"
+    },
+    "B3": {
+      "ten": "Tạp chí Giáo dục Nghệ thuật - Áo bà ba xưa và nay",
+      "url": "https://vjol.info.vn/tcgiaoducnghethuat/article/view/137388",
+      "loai": "tap_chi_hoc_thuat"
+    }
+  },
+  "trang_phuc": [
+    {
+      "id": "ao_ngu_than_tay_chen",
+      "ten": "Áo Ngũ Thân Tay Chẽn",
+      "nhom": "co_phuc",
+      "thoi_ky": "Định hình từ thời chúa Nguyễn Phúc Khoát (1739–1765), hoàn thiện từ thời Gia Long.",
+      "boi_canh_su_dung": [
+        "Trang phục thường ngày (thường phục/tiện phục) [BB]"
+      ],
+      "bo_phan": {
+        "co": "Cổ tạo hình đứng, khép kín, bo vuông, khá thấp: khoảng 2–4 cm (nữ thấp hơn nam) [VOV, SOI].",
+        "tay": "Ống tay thu hẹp dần kích thước từ nách xuống tới cổ tay, độ rộng chỉ vừa đủ để xỏ bàn tay qua [VOV].",
+        "than": "Cấu tạo từ 5 thân vải: 2 thân trước, 2 thân sau đối xứng và 1 thân con nằm bên trong vạt trước [VOV, VJ]. Áo sử dụng 5 cúc cài dọc chéo sang phía bên phải người mặc (gồm 1 cúc cổ, 1 cúc dưới vai, 1 cúc nách, 2 cúc dưới eo tạo thành hình chữ quảng) [VOV].",
+        "vat_lieu": "Gấm (giới thượng lưu); sa, the mỏng (giới trung lưu) [VOV]."
+      },
+      "mau_truyen_thong": [],
+      "phu_kien": [
+        "Quần vải màu trắng, ống rộng (có thể lên tới 36 cm) [VOV]"
+      ],
+      "nen_lam": [],
+      "khong_nen_khi_remix": [],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Cổ áo đứng vuông, khá thấp (khoảng 2–4 cm), vạt chắp từ 5 thân vải [VOV, SOI].",
+        "5 cúc cài dọc về bên phải người mặc [VOV].",
+        "Tay áo chẽn, nhỏ dần từ nách xuống cổ tay [VOV]."
+      ],
+      "tranh_nham_voi": [],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Thường gặp trong các dịp dạo phố cổ, dịp Lễ Tết hoặc chụp ảnh kỷ yếu.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Mang lại không khí hoài cổ nhẹ nhàng."
+        },
+        {
+          "noi_dung": "Nam giới có thể phối cùng khăn quấn (khăn đóng), nữ giới dùng khăn vành rây. Có thể kết hợp guốc mộc và mặc lót áo cánh trắng hoặc áo yếm bên trong để lấp ló viền trắng ở cổ.",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Tuân thủ gợi ý yếm chỉ làm lớp lót."
+        },
+        {
+          "noi_dung": "Để tiện di chuyển, có thể linh hoạt phối cùng quần âu Tây, giày da (nam) hoặc giày thể thao mộc mạc.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": ""
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Traditional Vietnamese tunic with a low standing square collar (about 2 to 4 cm). The narrow sleeves taper from the armpits down to the wrists. It features 5 buttons fastened to the right side of the wearer, running from the collar down to the waist. Worn with wide-legged white trousers.",
+      "mo_ta_goi_y_phoi_en": "Often styled with a traditional turban for men or a fabric halo headpiece for women, paired with wooden clogs. A white inner shirt or halter top (yem) can slightly show at the neckline. For a modern twist, it can be worn with tailored trousers, leather shoes, or casual sneakers.",
+      "ho_tro_uom_thu": "co",
+      "muc_chac_chan": "cao",
+      "nguon": [
+        "VOV",
+        "BB",
+        "VJ",
+        "SOI"
+      ],
+      "ghi_chu_can_kiem_chung": "Ý nghĩa Ngũ thường (Nhân - Lễ - Nghĩa - Trí - Tín) của 5 nút áo là quan niệm Nho giáo [VOV], cần thêm văn bản điển chế để xác minh tính chính thống. Các phụ kiện và màu sắc khác chưa có nguồn. Chiều cao cổ áo: VOV ghi khoảng 4 cm, SOI ghi khoảng 2 cm với nữ và 3–4 cm với nam [VOV, SOI]."
+    },
+    {
+      "id": "ao_tac",
+      "ten": "Áo Tấc",
+      "nhom": "co_phuc",
+      "thoi_ky": "Chưa có nguồn xác nhận thời kỳ cụ thể trong các trích đoạn.",
+      "boi_canh_su_dung": [
+        "Sử dụng trong các dịp lễ hội lớn, ngày tết [BB].",
+        "Dùng trong các nghi lễ như quan (lễ đội mũ trưởng thành), hôn, tang, tế [BB]."
+      ],
+      "bo_phan": {
+        "co": "Cổ đứng bo vuông ôm khít cổ, có 1 cúc ở chân cổ. Cổ được may thêm một dải vải đứng cao khoảng 4 cm (một tấc) [BB].",
+        "tay": "Không bó nách; ống tay hình chữ nhật rộng thẳng từ nách xuống cửa tay. Kích thước tay rộng từ 30-50cm, chiều dài cộng thêm từ 40-50cm tính từ cổ tay [BB].",
+        "than": "Dáng áo phát triển từ áo viên lĩnh cổ tròn nhưng nối thêm dải cổ đứng. May chắp từ 5 mảnh vải (2 vạt trước, 2 vạt sau, 1 vạt con lót trong). Tà áo dài đến gối hoặc xê dịch trên/dưới gối khoảng 7-10cm. Khuy cài gồm 5 chiếc bằng kim loại, đá, gỗ xếp hình chữ quảng [BB].",
+        "vat_lieu": "Chưa có nguồn xác nhận trong các trích đoạn."
+      },
+      "mau_truyen_thong": [],
+      "phu_kien": [
+        "Nam giới: Khăn vấn, khăn đóng, hoặc mũ tú tài [BB].",
+        "Nữ giới: Mũ phượng, khăn vấn [BB].",
+        "Quần thụng màu trắng rộng [BB]."
+      ],
+      "nen_lam": [],
+      "khong_nen_khi_remix": [],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Ống tay áo hình chữ nhật dài rộng, thẳng tuột không bó ở nách [BB].",
+        "Cổ đứng bo vuông, dùng 5 cúc chất liệu cứng (kim loại, đá, gỗ), không dùng cúc vải [BB]."
+      ],
+      "tranh_nham_voi": [
+        {
+          "ten": "Minh phục",
+          "diem_khac_biet": "Áo tấc có nách thẳng, tay chữ nhật, cổ vuông, cài 5 cúc. Trong khi đó, Minh phục có nách áo phình ra, mép tay đánh cong tròn, cổ bẻ hoặc bo tròn, thường chỉ dùng 2 cúc kèm nút dây buộc [BB]."
+        }
+      ],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Rất phù hợp cho các sự kiện văn hóa, nghi lễ cưới hỏi hoặc chụp ảnh concept cổ phục trang trọng.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Phát huy tối đa tính trang nghiêm của tay thụng."
+        },
+        {
+          "noi_dung": "Thường được đi kèm với khăn xếp (khăn đóng).",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Tạo điểm nhấn trang trọng."
+        },
+        {
+          "noi_dung": "Có thể kết hợp với giày da Oxford/Chelsea boots và kính râm retro để tạo nên những bộ ảnh nghệ thuật phá cách mà vẫn giữ form dáng áo.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Ứng dụng hơi thở hiện đại qua phụ kiện nhỏ."
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Traditional Vietnamese ceremonial tunic with a 4cm standing square collar and 5 non-fabric buttons down the front. The sleeves are large, rectangular, and drop straight down from the armpits without narrowing. The tunic length falls around the knees. Worn with a traditional turban and loose white trousers.",
+      "mo_ta_goi_y_phoi_en": "Typically accessorized with a ready-to-wear turban. For a creative modern look, it is sometimes styled with leather boots and retro sunglasses.",
+      "ho_tro_uom_thu": "co",
+      "muc_chac_chan": "trung_binh",
+      "nguon": [
+        "BB"
+      ],
+      "ghi_chu_can_kiem_chung": "Mức độ chắc chắn là trung bình do phần mô tả riêng của áo Tấc chỉ dựa trên một nguồn duy nhất [BB]."
+    },
+    {
+      "id": "ao_giao_linh",
+      "ten": "Áo Giao Lĩnh (Tràng Vạt)",
+      "nhom": "co_phuc",
+      "thoi_ky": "Từ thời Lý – Trần (khoảng thế kỷ XI – XIV) [GN].",
+      "boi_canh_su_dung": [
+        "Trang phục phổ biến trong triều đình và dân gian [GN]."
+      ],
+      "bo_phan": {
+        "co": "Cổ áo khoét chéo hình chữ V trước ngực [GN, VHVN].",
+        "tay": "Tay áo dài thẳng [GN], phom ống tay rộng hoặc vừa phải [VHVN].",
+        "than": "Áo dáng dài (qua gối hoặc chấm gót), rộng rãi, may từ 4 đến 6 tấm vải. Hai vạt trước bắt chéo nhau: vạt trái phủ ra bên ngoài, vạt phải lót bên trong. Không dùng khuy/cúc cài cố định mà giữ phom bằng dây buộc ẩn bên trong sườn và đai thắt ngang eo [GN, VHVN].",
+        "vat_lieu": "Lụa, gấm, vải thô (tùy tầng lớp) [VHVN]."
+      },
+      "mau_truyen_thong": [],
+      "phu_kien": [
+        "Quần dài mặc lót trong [VHVN].",
+        "Lớp thường (váy quây) quấn quanh eo buộc dây che thân dưới [VHVN].",
+        "Đai thắt ngang eo [GN, VHVN]."
+      ],
+      "nen_lam": [
+        "Mặc vạt trái đè lên vạt phải [GN, VHVN]."
+      ],
+      "khong_nen_khi_remix": [
+        {
+          "noi_dung": "Không mặc vạt phải đè lên ngoài vạt trái.",
+          "loai_quy_tac": "thong_le_ung_xu",
+          "can_cu": "Có quan niệm cho rằng mặc ngược vạt là cách mặc của người đã khuất hoặc tộc người du mục (Tuy nhiên chi tiết này chưa có nguồn văn bản lịch sử xác nhận rõ ràng)."
+        }
+      ],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Cổ áo khoét chéo hình chữ V [GN, VHVN].",
+        "Vạt áo trái đè lên trên vạt phải [GN, VHVN].",
+        "Áo không có khuy hay cúc cài, được cố định bằng đai thắt ngoài hoặc dây buộc trong [GN, VHVN]."
+      ],
+      "tranh_nham_voi": [
+        {
+          "ten": "Hán phục, Hanbok (Do cổ chéo, buộc dây và thắt đai là các đặc điểm chung của trang phục cổ Đông Á, rất khó phân biệt qua bề ngoài nếu không có hoa văn đặc thù).",
+          "diem_khac_biet": ""
+        }
+      ],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Thường xuất hiện trong các bộ ảnh nghệ thuật dã sử, lễ hội cổ phục hoặc biểu diễn sân khấu.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Tạo hình mang đậm tính điện ảnh, cổ kính."
+        },
+        {
+          "noi_dung": "Có thể kết hợp với đai thắt lưng lụa, trâm cài tóc mộc mạc và quạt giấy cầm tay.",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Giúp cố định dáng áo và tăng tính thẩm mỹ."
+        },
+        {
+          "noi_dung": "Có thể phối cùng quần culottes (quần ống rộng hiện đại) hoặc giày boots da cổ thấp để tạo phong cách cá tính nhưng vẫn giữ được độ rủ của tà áo.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Gợi ý phối đồ linh hoạt."
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Ancient Vietnamese robe featuring a cross-collar that forms a V-shape. The left front panel is worn crossed over the right panel. It has long, straight sleeves and a loose fit. The robe is secured with hidden inner ribbons and an outer waist belt, completely without buttons. Worn over long trousers and an inner skirt.",
+      "mo_ta_goi_y_phoi_en": "Often worn with a silk waist belt, simple hairpins, and a paper fan. For a contemporary touch, it can be paired with modern wide-legged culottes or short leather boots.",
+      "ho_tro_uom_thu": "thu_nghiem",
+      "muc_chac_chan": "trung_binh",
+      "nguon": [
+        "GN",
+        "VHVN"
+      ],
+      "ghi_chu_can_kiem_chung": "Các nguồn hiện có chưa phân biệt được rõ ràng Giao Lĩnh Việt Nam với Hán phục. Thuật ngữ mô tả chiều vạt áo (Tả nhậm / Hữu nhậm) có sự mâu thuẫn cách hiểu giữa các nguồn [GN, VHVN] nên đã được lược bỏ khỏi phần căn cứ kỹ thuật cốt lõi."
+    },
+    {
+      "id": "ao_tu_than",
+      "ten": "Áo Tứ Thân",
+      "nhom": "dan_gian",
+      "thoi_ky": "Từ đầu thế kỷ XIX đến sau năm 1945, phổ biến ở một số vùng thôn quê Bắc Bộ [SOI, VJ].",
+      "boi_canh_su_dung": [
+        "Trang phục thông dụng của phái nữ vùng thôn quê, được mặc cả khi lao động nặng nhọc [SOI, VJ]."
+      ],
+      "bo_phan": {
+        "co": "Cổ áo rất thấp, gần như không có cổ [SOI].",
+        "tay": "Tay áo chẽn, thường là lớp khoác ngoài với tay dài hoặc tay ngắn [SOI].",
+        "than": "Được may từ 4 mảnh vải: 2 mảnh vạt sau ghép liền dọc sống lưng, 2 vạt trước mở dọc thẳng từ trên xuống gấu. Áo không có khuy/cúc, khi mặc có thể để buông thõng hoặc buộc thắt 2 vạt trước vào nhau [SOI, VJ].",
+        "vat_lieu": "Chưa có nguồn xác nhận trong các trích đoạn."
+      },
+      "mau_truyen_thong": [],
+      "phu_kien": [],
+      "nen_lam": [],
+      "khong_nen_khi_remix": [],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Áo khoác ngoài 4 thân, có đường ghép nối giữa sống lưng [SOI, VJ].",
+        "Hai vạt trước để mở buông thõng thẳng xuống hoặc được thắt nút vào nhau, không dùng khuy cúc [SOI, VJ]."
+      ],
+      "tranh_nham_voi": [],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Là lựa chọn yêu thích trong các dịp hội hè dân gian, biểu diễn quan họ hoặc chụp ảnh concept làng quê Bắc Bộ.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": ""
+        },
+        {
+          "noi_dung": "Thường được mặc khoác ngoài lớp lót yếm đào hoặc yếm trắng, thắt dải lụa (ruột nghé) ngang eo, phối cùng váy đụp xòe đen, nón quai thao và khăn mỏ quạ.",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Gợi ý combo đặc trưng, tuân thủ yếm làm lớp trong."
+        },
+        {
+          "noi_dung": "Với các mẫu áo tứ thân cách điệu (cắt ngắn tà), có thể phối cùng chân váy xếp ly hiện đại hoặc quần ống loe để dễ dàng ứng dụng vào thời trang dạo phố.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Chuyển đổi linh hoạt sang streetwear."
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Traditional Vietnamese four-part outer tunic for women. Features a very low neckline. The back consists of two fabric panels sewn together down the center. The front has two unbuttoned panels that either fall straight down or are tied together in a knot. Worn as an outer garment with narrow sleeves.",
+      "mo_ta_goi_y_phoi_en": "Usually worn as an outer layer over a traditional halter top (yem), tied with a colorful silk sash at the waist, and paired with a wide black skirt. Accessories often include a folded headscarf and a large flat palm hat. Modern shortened versions can be styled with pleated skirts or flared pants.",
+      "ho_tro_uom_thu": "co",
+      "muc_chac_chan": "cao",
+      "nguon": [
+        "SOI",
+        "VJ"
+      ],
+      "ghi_chu_can_kiem_chung": "Các phụ kiện thường đi kèm áo tứ thân (như yếm, váy đụp, nón quai thao, khăn mỏ quạ) chưa được nhắc tới trong các đoạn trích cấp phép nên đã bị loại bỏ khỏi dữ liệu."
+    },
+    {
+      "id": "ao_dai_tan_thoi",
+      "ten": "Áo Dài Hiện Đại",
+      "nhom": "hien_dai_cach_tan",
+      "thoi_ky": "Áo dài Lemur ra đời năm 1934 [A4, A5] hoặc cuối những năm 1930 [A1] do họa sĩ Cát Tường sáng tạo. Kiểu tay Raglan xuất hiện vào thập niên 1960 do nhà may Dung ở Đakao (Sài Gòn) sáng tạo [A1, A2].",
+      "boi_canh_su_dung": [
+        "Dùng làm lễ phục và cả thường phục [A2]."
+      ],
+      "bo_phan": {
+        "co": "Áo Lê Phổ có thiết kế kín cổ (cổ đứng) [A3, A4].",
+        "tay": "Áo Lê Phổ có tay thẳng ôm nhẹ [A3, A4]. Sang thập niên 1960, kiểu tay Raglan phổ biến với đường ráp chéo từ cổ xuống nách, giúp giảm nếp nhăn ở nách và vai [A1, A2].",
+        "than": "Áo Lemur chỉ có 2 vạt (bỏ vạt con), vạt trước dài chấm đất [A1]. Dáng áo Lê Phổ ôm eo ngực vừa phải, gồm 2 tà dài chấm mắt cá hoặc gót chân, xẻ hai bên từ eo xuống [A3, A4]. Áo Lemur chuyển cúc về vai và sườn [A1]; áo Lê Phổ dùng khuy bấm kim loại chạy từ cổ sang vai phải xuống nách và sườn [A4].",
+        "vat_lieu": "Chưa có nguồn xác nhận cụ thể."
+      },
+      "mau_truyen_thong": [],
+      "phu_kien": [
+        "Quần dài [A4]. Trong thập niên 1960, phổ biến kiểu mặc áo tay Raglan phối cùng quần trắng [A3]."
+      ],
+      "nen_lam": [],
+      "khong_nen_khi_remix": [],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Áo xẻ tà hai bên hông từ eo trở xuống, mặc cùng quần dài [A3, A4].",
+        "Có hàng khuy/cúc chạy từ cổ qua vai phải và dọc bên sườn [A1, A4]."
+      ],
+      "tranh_nham_voi": [],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Gắn liền với lễ Tết, cưới hỏi, đồng phục học sinh - sinh viên và các sự kiện dự tiệc.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": ""
+        },
+        {
+          "noi_dung": "Nữ giới thường kết hợp cùng mấn đội đầu hoặc nón lá; nam giới có thể đội khăn đóng.",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Phụ kiện làm điểm nhấn truyền thống."
+        },
+        {
+          "noi_dung": "Áo dài cách tân (tà ngắn, tay lỡ) rất thường gặp khi phối cùng quần jeans, quần âu ống côn, đi kèm giày sneaker hoặc giày cao gót mũi nhọn.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": ""
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Modern Vietnamese Ao Dai. A fitted tunic featuring a closed standing collar and two long panels reaching the ankles or heels. It is split on both sides from the waist down. The sleeves can be straight or feature a diagonal raglan seam from the collar to the armpit. Metal snap buttons run from the collar across the right shoulder and down the side. Worn over long trousers.",
+      "mo_ta_goi_y_phoi_en": "Commonly accessorized with a fabric headpiece (man) or conical hat for women, and a traditional turban for men. Modern shortened styles are frequently paired with jeans, tailored trousers, high heels, or sneakers.",
+      "ho_tro_uom_thu": "co",
+      "muc_chac_chan": "trung_binh",
+      "nguon": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "SOI"
+      ],
+      "ghi_chu_can_kiem_chung": "Mức độ chắc chắn là 'trung_binh' do mốc thời gian ra đời áo Lemur có sự bất đồng giữa các nguồn tài liệu [A1, A4, A5]. Thời điểm raglan trong thập niên 1960 chưa thống nhất: A3 ghi đầu thập niên 1960, SOI ghi gần cuối thập niên 1960 [A3, SOI]."
+    },
+    {
+      "id": "ao_ba_ba",
+      "ten": "Áo Bà Ba",
+      "nhom": "dan_gian",
+      "thoi_ky": "Chưa có nguồn xác nhận.",
+      "boi_canh_su_dung": [],
+      "bo_phan": {
+        "co": "Cổ tròn hoặc cổ đứng [B2].",
+        "tay": "Truyền thống phổ biến nhất là tay dài, ngoài ra có tay lỡ hoặc tay ngắn [B1].",
+        "than": "Áo gồm hai tà, thân ôm nhẹ, độ dài ngang hông hoặc dài hơn [B1, B2]. Phía trước ngực có hàng cúc dọc làm bằng nhựa, gỗ hoặc bọc vải [B1, B2].",
+        "vat_lieu": "Vải thô, lụa, tơ tằm [B1]."
+      },
+      "mau_truyen_thong": [
+        {
+          "mau": "Trầm (nâu, đen)",
+          "y_nghia": "Màu truyền thống đặc trưng [B1]."
+        }
+      ],
+      "phu_kien": [
+        "Quần lụa đen ống rộng [B1].",
+        "Khăn rằn và mũ tai bèo (Theo hình ảnh nữ du kích thời kháng chiến) [B2]."
+      ],
+      "nen_lam": [],
+      "khong_nen_khi_remix": [],
+      "dac_diem_nhan_dien_hinh_anh": [
+        "Áo ngang hông hoặc dài hơn, cài cúc dọc thân trước [B1, B2].",
+        "Mặc cùng quần ống rộng [B1]."
+      ],
+      "tranh_nham_voi": [],
+      "goi_y_phoi_do": [
+        {
+          "noi_dung": "Thường gặp trong sinh hoạt văn hóa miệt vườn, biểu diễn đờn ca tài tử hoặc chụp ảnh dã ngoại.",
+          "loai": "boi_canh",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Gắn liền với không gian Nam Bộ."
+        },
+        {
+          "noi_dung": "Có thể quàng thêm khăn rằn trên cổ, kết hợp cùng nón lá hoặc mũ tai bèo.",
+          "loai": "phu_kien",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Bộ phụ kiện mang tính biểu tượng."
+        },
+        {
+          "noi_dung": "Các dáng áo bà ba chít eo cách tân có thể dễ dàng phối cùng quần jeans ôm sát, giày búp bê trơn để mặc đi làm, đi dạo phố.",
+          "loai": "phoi_hien_dai",
+          "nhan": "goi_y_cua_app",
+          "ghi_chu": "Phối hợp để tiện lợi hóa sinh hoạt hiện đại."
+        }
+      ],
+      "mo_ta_prompt_anh_en": "Traditional Vietnamese Ao Ba Ba. A tunic that lightly hugs the body, ending at or below the hips. It features two panels, a round or standing collar, and a vertical row of plastic, wooden, or fabric-covered buttons down the front. The sleeves are long, short, or three-quarter length. Worn with wide-legged black silk trousers.",
+      "mo_ta_goi_y_phoi_en": "Typically styled with a checkered scarf (khan ran) wrapped around the neck and a conical hat or boonie hat. Modern adaptations can be seamlessly paired with skinny jeans and flat shoes for everyday wear.",
+      "ho_tro_uom_thu": "co",
+      "muc_chac_chan": "trung_binh",
+      "nguon": [
+        "B1",
+        "B2",
+        "B3"
+      ],
+      "ghi_chu_can_kiem_chung": "Mức độ chắc chắn là 'trung_binh' do nguồn gốc trang phục còn nhiều giả thuyết (có ý kiến cho rằng bị ảnh hưởng từ áo kebaya của người Baba-Nyonya nhưng chưa thống nhất) [B3]. CÁC CHI TIẾT SAU CHƯA CÓ NGUỒN: Áo xuất hiện vào 'nửa đầu thế kỷ 19', có 2 túi to phía trước, áo có xẻ tà, chít eo nhẹ."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Remix Việt Phục Remix",
+  "description": "Ứng dụng sáng tạo và phối trang phục truyền thống Việt Nam dành cho giới trẻ với phong cách hiện đại.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

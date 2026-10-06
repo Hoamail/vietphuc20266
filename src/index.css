@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Playfair Display', serif;
+    --font-sans: 'Be Vietnam Pro', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Ceramic & Silk Heritage Colors */
+    --color-men-lam: #1E3F5A;
+    --color-men-ngoc: #2E6254;
+    --color-chu-sa: #B93826;
+    --color-to-tam: #C88E1B;
+    --color-nen-tro: #F8F6F0;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-nen-tro);
+    color: #161A1D;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, .font-heritage-display {
+    font-family: var(--font-display);
+  }
+}
