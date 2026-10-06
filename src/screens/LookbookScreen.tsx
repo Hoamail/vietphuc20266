@@ -7,6 +7,7 @@ import {
   BOI_CANH,
   getBoiCanhById,
   POTTERY_SILK_PALETTES,
+  getOutfitHoverNote,
 } from '../data/kb';
 import { EmptyState } from '../components/StatesFeedback';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
@@ -97,6 +98,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
             <button
               type="button"
               key={o.id}
+              title={getOutfitHoverNote(o)}
               onClick={() => setFilterOutfitId(o.id)}
               className={`px-3 py-1.5 text-xs rounded-xl font-medium cursor-pointer transition-colors whitespace-nowrap ${
                 filterOutfitId === o.id
@@ -170,7 +172,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-xs text-[#52606D] flex-wrap">
-                      <span>{outfit?.ten || 'Trang phục'}</span>
+                      <span title={getOutfitHoverNote(outfit)}>{outfit?.ten || 'Trang phục'}</span>
                       <span aria-hidden="true">·</span>
                       <span>{palette?.name}</span>
                     </div>
@@ -249,7 +251,10 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                     <OutfitVectorIllustration id={activeStoryCard.outfitId} size="lg" className="border-0 bg-transparent w-full h-full" />
 
                     <div className="absolute bottom-3 left-3 right-3 text-[#161A1D] bg-white/95 p-3 rounded-xl border border-[#DED7C6] shadow-sm">
-                      <div className="text-xs text-[#7A8691] font-medium">
+                      <div
+                        title={getOutfitHoverNote(outfit)}
+                        className="text-xs text-[#7A8691] font-medium"
+                      >
                         {outfit?.ten}
                       </div>
                       <h4 className="font-heritage-display text-base font-bold text-[#1E3F5A] leading-tight">

@@ -9,6 +9,7 @@ import {
   getAccessoriesForGarment,
   GarmentAccessoryOption,
   getMucChacChanLabel,
+  getOutfitHoverNote,
 } from '../data/kb';
 import { BoiCanhMucRemix } from '../types/boiCanh';
 import { RemixCustomization, WeatherCondition } from '../types/vietphuc';
@@ -137,7 +138,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
         <div className="sm:text-right bg-white px-3.5 py-2.5 rounded-xl border border-[#DED7C6] shrink-0">
           <div className="text-[11px] text-[#8E7E6B] font-medium">Trang phục đang chọn:</div>
-          <div className="font-heritage-display text-sm font-bold text-[#1E3F5A]">
+          <div
+            title={getOutfitHoverNote(outfit)}
+            className="font-heritage-display text-sm font-bold text-[#1E3F5A]"
+          >
             {outfit.ten}
           </div>
           <div className="text-xs text-[#52606D] mt-0.5">
@@ -236,7 +240,10 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
           {/* Dưới phần bối cảnh: Khuyến nghị trang phục (nen_uu_tien) & Lưu ý (luu_y) */}
           <div className="bg-white rounded-2xl border border-[#DED7C6] p-5 shadow-2xs space-y-4">
-            <h3 className="font-heritage-display text-base font-bold text-[#161A1D]">
+            <h3
+              title={getOutfitHoverNote(outfit)}
+              className="font-heritage-display text-base font-bold text-[#161A1D]"
+            >
               Đối chiếu trang phục &ldquo;{outfit.ten}&rdquo; trong bối cảnh &ldquo;{selectedBoiCanh.ten}&rdquo;
             </h3>
 
@@ -492,7 +499,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               <span className="text-xs text-[#7A8691]">Chạm để chọn / bỏ chọn</span>
             </div>
             <p className="text-xs text-[#6C7A87] mt-1">
-              Lấy từ mục <span className="font-mono">phu_kien</span> và <span className="font-mono">goi_y_phoi_do</span> của <strong>{outfit.ten}</strong>.
+              Lấy từ mục <span className="font-mono">phu_kien</span> và <span className="font-mono">goi_y_phoi_do</span> của <strong title={getOutfitHoverNote(outfit)}>{outfit.ten}</strong>.
             </p>
           </div>
 

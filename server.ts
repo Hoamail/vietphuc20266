@@ -411,13 +411,33 @@ function incrementDailyCapImage(): void {
   }
 }
 
+const ALLOWED_IMAGE_GUARDIAN_MIMES = new Set<string>([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+]);
+
+function normalizeGuardianMimeType(mime: unknown): string {
+  if (typeof mime !== 'string') return '';
+  const lower = mime.trim().toLowerCase();
+  if (lower === 'image/jpg' || lower === 'image/pjpeg') return 'image/jpeg';
+  if (lower === 'image/x-ms-bmp' || lower === 'image/x-bmp') return 'image/bmp';
+  return lower;
+}
+
 function checkImageMagicBytes(buffer: Buffer, mime: string): boolean {
-  if (!buffer || buffer.length < 8) return false;
+  if (!buffer || buffer.length < 4) return false;
   if (mime === 'image/jpeg') {
     return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
   }
   if (mime === 'image/png') {
     return (
+      buffer.length >= 8 &&
       buffer[0] === 0x89 &&
       buffer[1] === 0x50 &&
       buffer[2] === 0x4e &&
@@ -427,6 +447,27 @@ function checkImageMagicBytes(buffer: Buffer, mime: string): boolean {
       buffer[6] === 0x1a &&
       buffer[7] === 0x0a
     );
+  }
+  if (mime === 'image/webp') {
+    return (
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+    );
+  }
+  if (mime === 'image/gif') {
+    if (buffer.length < 6) return false;
+    const header = buffer.subarray(0, 6).toString('ascii');
+    return header === 'GIF87a' || header === 'GIF89a';
+  }
+  if (mime === 'image/bmp') {
+    return buffer[0] === 0x42 && buffer[1] === 0x4d;
+  }
+  if (mime === 'image/heic' || mime === 'image/heif') {
+    return buffer.length >= 12 && buffer.subarray(4, 8).toString('ascii') === 'ftyp';
+  }
+  if (mime === 'application/pdf') {
+    return buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-';
   }
   return false;
 }
@@ -1844,11 +1885,14 @@ async function startServer() {
       });
     }
 
-    if (mimeType !== 'image/jpeg' && mimeType !== 'image/png') {
+    const normalizedMime = normalizeGuardianMimeType(mimeType);
+
+    if (!ALLOWED_IMAGE_GUARDIAN_MIMES.has(normalizedMime)) {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (chỉ chấp nhận ảnh định dạng JPG hoặc PNG).',
+        message:
+          'Chưa kiểm tra được (chỉ chấp nhận tệp định dạng JPG, JPEG, PNG, WEBP, GIF, BMP, HEIC/HEIF hoặc PDF).',
       });
     }
 
@@ -1856,11 +1900,11 @@ async function startServer() {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (thiếu dữ liệu ảnh).',
+        message: 'Chưa kiểm tra được (thiếu dữ liệu tệp).',
       });
     }
 
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, '').trim();
+    const cleanBase64 = imageBase64.replace(/^data:[a-zA-Z0-9/+.-]+;base64,/, '').trim();
     let imgBuffer: Buffer;
     try {
       imgBuffer = Buffer.from(cleanBase64, 'base64');
@@ -1876,15 +1920,16 @@ async function startServer() {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (kích thước ảnh tối đa 4MB).',
+        message: 'Chưa kiểm tra được (kích thước tệp tối đa 4MB).',
       });
     }
 
-    if (!checkImageMagicBytes(imgBuffer, mimeType)) {
+    if (!checkImageMagicBytes(imgBuffer, normalizedMime)) {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (dấu hiệu tệp không đúng định dạng JPG hoặc PNG).',
+        message:
+          'Chưa kiểm tra được (dấu hiệu tệp không khớp với định dạng JPG, JPEG, PNG, WEBP, GIF, BMP, HEIC/HEIF hoặc PDF).',
       });
     }
 
@@ -1940,7 +1985,7 @@ async function startServer() {
           contents: [
             {
               inlineData: {
-                mimeType,
+                mimeType: normalizedMime,
                 data: cleanBase64,
               },
             },

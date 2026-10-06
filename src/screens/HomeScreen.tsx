@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, ArrowRight, ShieldCheck, BookOpen, Layers, CheckCircle2, Camera } from 'lucide-react';
-import { getTrangPhucById, KB_NGUON, getLoaiNguonLabel, formatNguonText } from '../data/kb';
+import { getTrangPhucById, KB_NGUON, getLoaiNguonLabel, formatNguonText, getOutfitHoverNote } from '../data/kb';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 
@@ -184,7 +184,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {/* Card Body */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
-                    <h3 className="font-heritage-display text-base font-bold text-[#161A1D] leading-tight">
+                    <h3
+                      title={getOutfitHoverNote(outfit)}
+                      className="font-heritage-display text-base font-bold text-[#161A1D] leading-tight"
+                    >
                       {outfit.ten}
                     </h3>
                     <div className="text-[11px] font-mono text-[#8E7E6B] mt-0.5 mb-1.5">

@@ -1,5 +1,12 @@
 import React from 'react';
 
+/**
+ * QUY ƯỚC HƯỚNG HÌNH MINH HOẠ (THỐNG NHẤT):
+ * - Hình vẽ thể hiện người mặc đứng nhìn thẳng về phía người xem (trục đối xứng ngang tại x = 120 trên viewBox 240x280).
+ * - BÊN PHẢI NGƯỜI MẶC nằm ở BÊN TRÁI HÌNH (x < 120).
+ * - BÊN TRÁI NGƯỜI MẶC nằm ở BÊN PHẢI HÌNH (x > 120).
+ */
+
 interface SVGComponentProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -42,27 +49,27 @@ export const AoNguThanIllustration: React.FC<SVGComponentProps> = ({ className =
           strokeLinejoin="round"
         />
 
-        {/* Vạt cài chéo đè sang phía bên phải */}
+        {/* Vạt cài chéo đè sang phía bên phải người mặc (bên trái hình) */}
         <path
-          d="M120 65 Q136 88 142 118 L144 215"
+          d="M120 65 Q104 88 98 118 L96 215"
           stroke="#1E3F5A"
           strokeWidth="1.6"
           strokeLinecap="round"
         />
-        {/* Nếp gấp thân con (thân thứ 5 nằm bên trong) */}
-        <path d="M120 65 L144 95 L144 215" fill="#DCE7F0" fillOpacity="0.4" />
+        {/* Nếp gấp thân con (thân thứ 5 nằm bên trong, phía bên phải người mặc / bên trái hình) */}
+        <path d="M120 65 L96 95 L96 215" fill="#DCE7F0" fillOpacity="0.4" />
 
-        {/* 5 Cúc cài kim loại mạ vàng hình chữ quảng bên phải */}
+        {/* 5 Cúc cài kim loại mạ vàng hình chữ quảng bên phải người mặc (bên trái hình) */}
         {/* 1. Cúc cổ */}
-        <circle cx="122" cy="58" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="118" cy="58" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
         {/* 2. Cúc dưới vai */}
-        <circle cx="134" cy="78" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="106" cy="78" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
         {/* 3. Cúc nách */}
-        <circle cx="141" cy="98" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="99" cy="98" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
         {/* 4. Cúc dưới eo 1 */}
-        <circle cx="143" cy="120" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="97" cy="120" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
         {/* 5. Cúc dưới eo 2 */}
-        <circle cx="143" cy="142" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="97" cy="142" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
 
         {/* Tay áo Chẽn: thu nhỏ dần từ nách tới cổ tay vừa khít */}
         {/* Tay trái */}
@@ -132,15 +139,15 @@ export const AoTacIllustration: React.FC<SVGComponentProps> = ({ className = '',
           strokeLinejoin="round"
         />
 
-        {/* Đường cài khuy chéo bên phải */}
-        <path d="M120 64 Q138 88 144 116 L146 215" stroke="#B93826" strokeWidth="1.5" strokeDasharray="3 2" />
+        {/* Đường cài khuy chéo bên phải người mặc (bên trái hình) */}
+        <path d="M120 64 Q102 88 96 116 L94 215" stroke="#B93826" strokeWidth="1.5" strokeDasharray="3 2" />
 
-        {/* 5 Cúc cúc kim loại/gỗ xếp hình chữ quảng */}
-        <circle cx="128" cy="72" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
-        <circle cx="138" cy="90" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
-        <circle cx="144" cy="112" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
-        <circle cx="145" cy="134" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
-        <circle cx="145" cy="154" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        {/* 5 Cúc kim loại/gỗ xếp hình chữ quảng bên phải người mặc (bên trái hình) */}
+        <circle cx="112" cy="72" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="102" cy="90" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="96" cy="112" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="95" cy="134" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
+        <circle cx="95" cy="154" r="2.8" fill="#C88E1B" stroke="#684A10" strokeWidth="1.2" />
 
         {/* ĐẶC ĐIỂM CỐT LÕI: Tay áo THỤNG hình chữ nhật dài rộng buông thẳng không bó nách */}
         {/* Ống tay trái rộng 40cm, buông rủ dài */}
@@ -205,19 +212,19 @@ export const AoGiaoLinhIllustration: React.FC<SVGComponentProps> = ({ className 
           strokeLinejoin="round"
         />
 
-        {/* Vạt phải nằm bên trong (đường nét đứt nhẹ) */}
-        <path d="M142 56 L104 108 L104 215" stroke="#7BA89B" strokeWidth="1.4" strokeDasharray="3 2" />
+        {/* Vạt phải người mặc (bên trái hình) nằm bên trong / dưới (đường nét đứt nhẹ) */}
+        <path d="M98 56 L136 108 L136 215" stroke="#7BA89B" strokeWidth="1.4" strokeDasharray="3 2" />
 
-        {/* ĐẶC ĐIỂM CỐT LÕI: Cổ chéo chữ V - VẠT TRÁI ĐÈ LÊN VẠT PHẢI */}
+        {/* ĐẶC ĐIỂM CỐT LÕI: Cổ chéo chữ V - VẠT TRÁI NGƯỜI MẶC (bên phải hình) ĐÈ LÊN VẠT PHẢI (về phía bên trái hình) */}
         <path
-          d="M98 56 L120 108 L160 152 L164 215"
+          d="M142 56 L120 108 L80 152 L76 215"
           fill="#D9EBE3"
           stroke="#2E6254"
           strokeWidth="1.8"
         />
         {/* Nẹp viền cổ áo giao lĩnh chữ V */}
-        <path d="M98 56 L120 106 L148 56" stroke="#2E6254" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M102 56 L120 102 L144 56" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M142 56 L120 106 L92 56" stroke="#2E6254" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M138 56 L120 102 L96 56" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
 
         {/* Tay áo dài thẳng, phom ống rộng vừa phải buông rủ */}
         <path
@@ -339,19 +346,23 @@ export const AoTuThanIllustration: React.FC<SVGComponentProps> = ({ className = 
 };
 
 /**
- * 5. Áo Dài Hiện Đại (Lemur / Lê Phổ / Raglan)
+ * 5. Áo dài Lê Phổ (Áo dài hiện đại: Lemur / Lê Phổ / Raglan)
  * Nhận diện: Dáng áo ôm sát thon thả, cổ đứng cao kín đáo, đường ráp chéo tay Raglan,
- * hàng cúc bấm vai phải, hai tà dài xẻ hai bên hông từ eo, quần dài trắng.
+ * hàng cúc bấm vai phải người mặc (bên trái hình), hai tà dài xẻ hai bên hông từ eo, quần dài trắng.
  */
 export const AoDaiTanThoiIllustration: React.FC<SVGComponentProps> = ({ className = '', size = 'md' }) => {
   return (
-    <div className={`relative flex items-center justify-center bg-[#FAF4F4] rounded-xl overflow-hidden p-2 border border-[#EBDCDC] ${className}`}>
+    <div
+      title="Áo dài hiện đại"
+      className={`relative flex items-center justify-center bg-[#FAF4F4] rounded-xl overflow-hidden p-2 border border-[#EBDCDC] ${className}`}
+    >
       <svg
         viewBox="0 0 240 280"
         className="w-full h-full max-h-full select-none"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <title>Áo dài hiện đại</title>
         <circle cx="120" cy="140" r="105" fill="#F6ECEC" stroke="#E5D1D1" strokeWidth="1" strokeDasharray="3 3" />
 
         {/* Quần lụa dài trắng ống suông rộng */}
@@ -375,13 +386,13 @@ export const AoDaiTanThoiIllustration: React.FC<SVGComponentProps> = ({ classNam
         <line x1="110" y1="54" x2="88" y2="85" stroke="#9C2A3B" strokeWidth="1.6" strokeDasharray="3 2" />
         <line x1="130" y1="54" x2="152" y2="85" stroke="#9C2A3B" strokeWidth="1.6" strokeDasharray="3 2" />
 
-        {/* ĐẶC ĐIỂM CỐT LÕI 2: Hàng cúc bấm kim loại chạy từ cổ sang vai phải và dọc bên sườn */}
-        <circle cx="122" cy="51" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
-        <circle cx="128" cy="62" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
-        <circle cx="137" cy="74" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
-        <circle cx="142" cy="92" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
-        <circle cx="144" cy="112" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
-        <circle cx="144" cy="128" r="2.2" fill="#C88E1B" stroke="#684A10" strokeWidth="1" />
+        {/* ĐẶC ĐIỂM CỐT LÕI 2: Hàng cúc bấm kim loại chạy từ cổ sang vai phải người mặc (bên trái hình) và dọc bên sườn */}
+        <circle cx="118" cy="51" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
+        <circle cx="112" cy="62" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
+        <circle cx="103" cy="74" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
+        <circle cx="98" cy="92" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
+        <circle cx="96" cy="112" r="2" fill="#FFFFFF" stroke="#9C2A3B" strokeWidth="1" />
+        <circle cx="96" cy="128" r="2.2" fill="#C88E1B" stroke="#684A10" strokeWidth="1" />
 
         {/* ĐẶC ĐIỂM CỐT LÕI 3: Điểm xẻ tà cao ở hai bên hông từ eo xuống */}
         <path d="M96 128 L88 240" stroke="#9C2A3B" strokeWidth="1.8" />

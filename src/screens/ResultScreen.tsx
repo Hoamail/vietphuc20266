@@ -27,6 +27,7 @@ import {
   getLoaiNguonLabel,
   getMucChacChanLabel,
   formatNguonText,
+  getOutfitHoverNote,
 } from '../data/kb';
 import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn, OptionGuardianState } from '../types/vietphuc';
 import { KBTrangPhuc } from '../types/kb';
@@ -146,7 +147,11 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                 Tìm Nơi Thuê / Mua Trang Phục
               </h3>
               <p className="text-xs text-[#6C7A87]">
-                Trang phục: <span className="font-semibold text-[#1E3F5A]">{outfit.ten}</span> · {phuongAn.ten}
+                Trang phục:{' '}
+                <span title={getOutfitHoverNote(outfit)} className="font-semibold text-[#1E3F5A]">
+                  {outfit.ten}
+                </span>{' '}
+                · {phuongAn.ten}
               </p>
             </div>
           </div>
@@ -935,7 +940,10 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                   <span aria-hidden="true">·</span>
                   <span>Bối cảnh: {boiCanh.ten}</span>
                 </div>
-                <h1 className="font-heritage-display text-2xl font-bold text-[#161A1D] leading-tight">
+                <h1
+                  title={getOutfitHoverNote(outfit)}
+                  className="font-heritage-display text-2xl font-bold text-[#161A1D] leading-tight"
+                >
                   {resultTitle}
                 </h1>
                 <p className="text-xs text-[#52606D] mt-1">
@@ -1014,7 +1022,11 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                             Kiểm tra ảnh thực tế với Cultural Guardian
                           </div>
                           <div className="text-[11px] text-[#4A5560]">
-                            Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn {outfit.ten}.
+                            Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn{' '}
+                            <span title={getOutfitHoverNote(outfit)} className="font-medium">
+                              {outfit.ten}
+                            </span>
+                            .
                           </div>
                         </div>
                       </div>

@@ -11,10 +11,53 @@ import {
   X,
   ArrowLeft,
   FileCheck2,
+  FileText,
   RotateCw,
 } from 'lucide-react';
-import { KB_TRANG_PHUC, getTrangPhucById } from '../data/kb';
+import { KB_TRANG_PHUC, getTrangPhucById, getOutfitHoverNote } from '../data/kb';
 import { ImageGuardianResult } from '../types/vietphuc';
+
+const ALLOWED_GUARDIAN_MIMES = new Set<string>([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+]);
+
+function resolveGuardianMimeType(file: File): string {
+  const rawType = (file.type || '').trim().toLowerCase();
+  if (rawType === 'image/jpg' || rawType === 'image/pjpeg') return 'image/jpeg';
+  if (rawType === 'image/x-ms-bmp' || rawType === 'image/x-bmp') return 'image/bmp';
+  if (ALLOWED_GUARDIAN_MIMES.has(rawType)) return rawType;
+
+  const ext = file.name.split('.').pop()?.trim().toLowerCase() || '';
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+    case 'jfif':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'webp':
+      return 'image/webp';
+    case 'gif':
+      return 'image/gif';
+    case 'bmp':
+      return 'image/bmp';
+    case 'heic':
+      return 'image/heic';
+    case 'heif':
+      return 'image/heif';
+    case 'pdf':
+      return 'application/pdf';
+    default:
+      return rawType;
+  }
+}
 
 interface ImageGuardianScreenProps {
   initialOutfitId?: string;
@@ -38,7 +81,9 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
 }) => {
   const [selectedOutfitId, setSelectedOutfitId] = useState<string>(initialOutfitId);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [resolvedMimeType, setResolvedMimeType] = useState<string>('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imagePreviewFailed, setImagePreviewFailed] = useState<boolean>(false);
   const [base64Data, setBase64Data] = useState<string | null>(null);
 
   // Ô cam kết & Captcha xác nhận
@@ -71,21 +116,27 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
 
   const processFile = (file: File) => {
     setApiError(null);
+    setImagePreviewFailed(false);
     // Không xoá kết quả kiểm tra cũ ở đây: kết quả chỉ mất khi người dùng bấm kiểm tra ảnh mới
 
-    // Kiểm tra định dạng (JPG / PNG)
-    if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
-      setApiError('Định dạng tệp không hợp lệ. Vui lòng chỉ chọn ảnh định dạng JPG hoặc PNG.');
+    const detectedMime = resolveGuardianMimeType(file);
+
+    // Kiểm tra định dạng (JPG / JPEG / PNG / WEBP / GIF / BMP / HEIC / HEIF / PDF)
+    if (!ALLOWED_GUARDIAN_MIMES.has(detectedMime)) {
+      setApiError(
+        'Định dạng tệp không hợp lệ. Vui lòng chọn ảnh hoặc tài liệu định dạng JPG, JPEG, PNG, WEBP, GIF, BMP, HEIC/HEIF hoặc PDF.'
+      );
       return;
     }
 
     // Kiểm tra kích thước tối đa 4 MB
     if (file.size > 4 * 1024 * 1024) {
-      setApiError('Dung lượng tệp vượt quá 4 MB. Vui lòng chọn ảnh có kích thước nhỏ hơn.');
+      setApiError('Dung lượng tệp vượt quá 4 MB. Vui lòng chọn tệp có kích thước nhỏ hơn.');
       return;
     }
 
     setSelectedFile(file);
+    setResolvedMimeType(detectedMime);
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
 
@@ -96,7 +147,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
       setBase64Data(base64);
     };
     reader.onerror = () => {
-      setApiError('Không thể đọc dữ liệu ảnh. Vui lòng thử lại với tệp khác.');
+      setApiError('Không thể đọc dữ liệu tệp. Vui lòng thử lại với tệp khác.');
     };
     reader.readAsDataURL(file);
   };
@@ -106,7 +157,9 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
       URL.revokeObjectURL(previewUrl);
     }
     setSelectedFile(null);
+    setResolvedMimeType('');
     setPreviewUrl(null);
+    setImagePreviewFailed(false);
     setBase64Data(null);
     setApiError(null);
     if (fileInputRef.current) {
@@ -146,7 +199,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
         body: JSON.stringify({
           outfitId: selectedOutfit.id,
           imageBase64: base64Data,
-          mimeType: selectedFile!.type,
+          mimeType: resolvedMimeType || resolveGuardianMimeType(selectedFile!),
         }),
       });
 
@@ -254,6 +307,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
             </label>
             <select
               value={selectedOutfitId}
+              title={getOutfitHoverNote(selectedOutfit)}
               onChange={(e) => {
                 setSelectedOutfitId(e.target.value);
                 setApiError(null);
@@ -262,18 +316,18 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
               className="w-full text-sm font-semibold border border-[#DED7C6] rounded-xl p-2.5 bg-[#FAF8F5] text-[#161A1D] focus:outline-none focus:ring-2 focus:ring-[#1E3F5A] cursor-pointer"
             >
               {KB_TRANG_PHUC.map((outfit) => (
-                <option key={outfit.id} value={outfit.id}>
+                <option key={outfit.id} value={outfit.id} title={getOutfitHoverNote(outfit)}>
                   {outfit.ten}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Card: Tải ảnh */}
+          {/* Card: Tải ảnh / PDF */}
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#DED7C6] shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
-                2. Tải ảnh trang phục (JPG / PNG ≤ 4MB)
+                2. Tải ảnh / PDF trang phục (≤ 4MB)
               </label>
               {selectedFile && (
                 <button
@@ -282,7 +336,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                   className="text-xs text-rose-700 hover:text-rose-900 flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <X className="w-3.5 h-3.5" />
-                  Gỡ ảnh
+                  Gỡ tệp
                 </button>
               )}
             </div>
@@ -290,7 +344,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/jpeg,image/png"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,.pdf"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -310,20 +364,47 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                   <Upload className="w-5 h-5" />
                 </div>
                 <div className="text-sm font-semibold text-[#161A1D]">
-                  Chọn ảnh hoặc kéo thả vào đây
+                  Chọn ảnh / tệp PDF hoặc kéo thả vào đây
                 </div>
                 <div className="text-xs text-[#7A8691]">
-                  Chấp nhận JPG hoặc PNG, dung lượng tối đa 4 MB
+                  Hỗ trợ JPG, JPEG, PNG, WEBP, GIF, BMP, HEIC/HEIF, PDF (tối đa 4 MB)
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="relative rounded-xl overflow-hidden border border-[#DED7C6] bg-black/5 flex items-center justify-center max-h-64">
-                  <img
-                    src={previewUrl}
-                    alt="Xem trước ảnh trang phục"
-                    className="max-h-64 w-full object-contain mx-auto"
-                  />
+                  {resolvedMimeType === 'application/pdf' ? (
+                    <div className="w-full p-5 bg-[#FAF8F5] flex flex-col items-center justify-center gap-2 text-center">
+                      <div className="w-11 h-11 rounded-xl bg-[#EAE4D7] flex items-center justify-center text-[#1E3F5A]">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="text-xs font-bold text-[#161A1D] truncate max-w-full px-2">
+                        {selectedFile?.name || 'Tài liệu PDF'}
+                      </div>
+                      <div className="text-[11px] text-[#52606D]">
+                        Tệp PDF đã sẵn sàng để đối chiếu với Cultural Guardian
+                      </div>
+                    </div>
+                  ) : imagePreviewFailed ? (
+                    <div className="w-full p-5 bg-[#FAF8F5] flex flex-col items-center justify-center gap-2 text-center">
+                      <div className="w-11 h-11 rounded-xl bg-[#EAE4D7] flex items-center justify-center text-[#1E3F5A]">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                      <div className="text-xs font-bold text-[#161A1D] truncate max-w-full px-2">
+                        {selectedFile?.name || 'Tệp hình ảnh'}
+                      </div>
+                      <div className="text-[11px] text-[#52606D]">
+                        Định dạng {resolvedMimeType.replace('image/', '').toUpperCase()} đã sẵn sàng để kiểm tra
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={previewUrl}
+                      alt="Xem trước ảnh trang phục"
+                      onError={() => setImagePreviewFailed(true)}
+                      className="max-h-64 w-full object-contain mx-auto"
+                    />
+                  )}
                 </div>
                 {selectedFile && (
                   <div className="flex items-center justify-between text-[11px] text-[#7A8691] px-1">
@@ -332,7 +413,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                   </div>
                 )}
                 <div className="text-[11px] text-[#7A8691] italic text-center">
-                  Ảnh do người dùng tải lên, chỉ dùng để phân tích trong phiên này và không lưu trữ trên máy chủ.
+                  Tệp do người dùng tải lên, chỉ dùng để phân tích trong phiên này và không lưu trữ trên máy chủ.
                 </div>
               </div>
             )}
@@ -475,7 +556,10 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                   <div className="text-[11px] font-mono uppercase tracking-wider text-[#7A8691]">
                     Kết quả đối chiếu hình ảnh
                   </div>
-                  <div className="text-lg font-bold text-[#161A1D]">
+                  <div
+                    title={getOutfitHoverNote(selectedOutfit)}
+                    className="text-lg font-bold text-[#161A1D]"
+                  >
                     {selectedOutfit.ten}
                   </div>
                 </div>
@@ -585,6 +669,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                 {onSelectOutfitForRemix && (
                   <button
                     type="button"
+                    title={getOutfitHoverNote(selectedOutfit)}
                     onClick={() => onSelectOutfitForRemix(selectedOutfit.id)}
                     className="text-xs font-semibold bg-[#1E3F5A] text-white px-3.5 py-2 rounded-xl hover:bg-[#152e42] transition-colors cursor-pointer shadow-2xs"
                   >

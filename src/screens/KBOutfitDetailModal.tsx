@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, ArrowLeft, ExternalLink, ShieldCheck, Sparkles, BookOpen, AlertCircle, Info, Check, Shirt } from 'lucide-react';
 import { KBTrangPhuc, KBNguonMap, KBNguonItem } from '../types/kb';
+import { getOutfitHoverNote } from '../data/kb';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText, formatNoSourceText } from '../components/SourceCitationText';
 
@@ -114,8 +115,18 @@ export const KBOutfitDetailModal: React.FC<KBOutfitDetailModalProps> = ({
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-heritage-display text-lg sm:text-xl font-bold leading-tight">
-                  {outfit.ten}
+                <h2
+                  title={getOutfitHoverNote(outfit)}
+                  className="relative group/modalname font-heritage-display text-lg sm:text-xl font-bold leading-tight inline-flex items-center gap-1"
+                >
+                  <span className={getOutfitHoverNote(outfit) ? 'underline decoration-dotted decoration-[#8E7E6B] underline-offset-4' : ''}>
+                    {outfit.ten}
+                  </span>
+                  {getOutfitHoverNote(outfit) && (
+                    <span className="pointer-events-none opacity-0 group-hover/modalname:opacity-100 transition-opacity absolute left-0 -bottom-7 z-30 whitespace-nowrap rounded-md bg-[#161A1D] px-2 py-0.5 font-sans text-[11px] font-medium text-white shadow-md">
+                      {getOutfitHoverNote(outfit)}
+                    </span>
+                  )}
                 </h2>
                 <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${group.color}`}>
                   {group.label}

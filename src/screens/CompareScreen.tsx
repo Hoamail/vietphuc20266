@@ -6,6 +6,7 @@ import {
   KB_NGUON,
   getLoaiNguonLabel,
   formatNguonText,
+  getOutfitHoverNote,
 } from '../data/kb';
 import { KBTrangPhuc } from '../types/kb';
 import { EmptyState } from '../components/StatesFeedback';
@@ -92,14 +93,20 @@ export const CompareScreen: React.FC<CompareScreenProps> = ({
               <button
                 type="button"
                 key={outfit.id}
+                title={getOutfitHoverNote(outfit)}
                 onClick={() => onToggleOutfit(outfit.id)}
-                className={`px-3 py-1.5 text-xs rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`relative group/btn px-3 py-1.5 text-xs rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
                   isChecked
                     ? 'bg-[#1E3F5A] text-white border-[#1E3F5A]'
                     : 'bg-[#F8F6F0] text-[#4A5560] border-[#DED7C6] hover:border-[#1E3F5A]'
                 }`}
               >
                 <span>{outfit.ten}</span>
+                {getOutfitHoverNote(outfit) && (
+                  <span className="pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 -top-7 z-20 whitespace-nowrap rounded-md bg-[#161A1D] px-2 py-0.5 text-[11px] font-medium text-white shadow-md">
+                    {getOutfitHoverNote(outfit)}
+                  </span>
+                )}
                 {isChecked ? (
                   <Check className="w-3.5 h-3.5" />
                 ) : (
@@ -162,7 +169,10 @@ export const CompareScreen: React.FC<CompareScreenProps> = ({
 
                       {/* Title */}
                       <div className="p-4 border-b border-[#DED7C6]/60">
-                        <h3 className="font-heritage-display text-base font-bold text-[#161A1D] leading-tight">
+                        <h3
+                          title={getOutfitHoverNote(outfit)}
+                          className="font-heritage-display text-base font-bold text-[#161A1D] leading-tight"
+                        >
                           {outfit.ten}
                         </h3>
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-[#2E6254] font-medium">
