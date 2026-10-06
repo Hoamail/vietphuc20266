@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ArrowLeft, Scale, Share2, Check, ExternalLink, Info, RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
 import {
   getTrangPhucById,
@@ -78,35 +78,60 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
   // State Cultural Guardian cho từng phương án (key = pa.token)
   const [guardianStates, setGuardianStates] = useState<Record<string, OptionGuardianState>>({});
+  // Set lưu các token phương án đã hoặc đang được gửi đi thẩm định Guardian (ngăn vòng lặp tuyệt đối)
+  const evaluatedTokensRef = useRef<Set<string>>(new Set());
 
   const outfit = getTrangPhucById(selectedOutfitId) || KB_TRANG_PHUC[0];
   const boiCanh = getBoiCanhById(customization.purposeId) || BOI_CANH[0];
   const colorScheme =
     POTTERY_SILK_PALETTES.find((c) => c.id === customization.colorSchemeId) || POTTERY_SILK_PALETTES[0];
 
-  const accessoryOptions = getAccessoriesForGarment(outfit);
-  const validSelectedAccessoryIds = customization.selectedAccessoryIds.filter((id) =>
-    accessoryOptions.some((opt) => opt.id === id)
-  );
-  const selectedAccessories = accessoryOptions.filter((a) =>
-    validSelectedAccessoryIds.includes(a.id)
-  );
+  const accessoryOptions = useMemo(() => getAccessoriesForGarment(outfit), [outfit.id]);
 
-  const requestPayload = {
+  const selectedAccessoriesKey = useMemo(() => {
+    return (customization.selectedAccessoryIds || []).slice().sort().join(',');
+  }, [customization.selectedAccessoryIds]);
+
+  const validSelectedAccessoryIds = useMemo(() => {
+    return (customization.selectedAccessoryIds || []).filter((id) =>
+      accessoryOptions.some((opt) => opt.id === id)
+    );
+  }, [selectedAccessoriesKey, accessoryOptions]);
+
+  const selectedAccessories = useMemo(() => {
+    return accessoryOptions.filter((a) => validSelectedAccessoryIds.includes(a.id));
+  }, [accessoryOptions, validSelectedAccessoryIds]);
+
+  const requestPayload = useMemo(() => ({
     outfitId: outfit.id,
     purposeId: boiCanh.id,
     remixLevel: customization.remixLevel,
     colorSchemeId: colorScheme.id,
     selectedAccessoryIds: validSelectedAccessoryIds,
     weather: customization.weather,
-  };
-  const requestKey = JSON.stringify(requestPayload);
+  }), [
+    outfit.id,
+    boiCanh.id,
+    customization.remixLevel,
+    colorScheme.id,
+    validSelectedAccessoryIds,
+    customization.weather,
+  ]);
+
+  const requestKey = useMemo(() => JSON.stringify(requestPayload), [requestPayload]);
+
+  // Luôn giữ tham chiếu params mới nhất trong ref để async hàm Guardian đọc được mà không biến đổi dependency
+  const currentParamsRef = useRef(requestPayload);
+  useEffect(() => {
+    currentParamsRef.current = requestPayload;
+  }, [requestPayload]);
 
   const fetchStyleOptions = useCallback(async () => {
     setIsLoadingStyle(true);
     setStyleError(null);
     setStyleErrorReason(null);
     setGuardianStates({});
+    evaluatedTokensRef.current.clear();
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 31000);
@@ -142,6 +167,8 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         setPhuongAnList([]);
         if (res.status === 429 && data?.message === 'Hệ thống đã đạt giới hạn hôm nay') {
           setStyleError('Chưa kiểm tra được (Hệ thống đã đạt giới hạn hôm nay)');
+        } else if (res.status === 429 || data?.reason === 'quota') {
+          setStyleError('Chưa kiểm tra được (Hệ thống đang tạm thời quá tải, vui lòng thử lại sau)');
         } else {
           setStyleError('Chưa kiểm tra được');
         }
@@ -167,7 +194,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     }
   }, [requestKey]);
 
-  // Gọi /api/style đúng một lần khi vào màn
+  // Gọi /api/style ĐÚNG 1 LẦN khi mount hoặc khi requestKey thực sự thay đổi
   useEffect(() => {
     if (lastFetchedKeyRef.current === requestKey) {
       return;
@@ -177,12 +204,23 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   }, [requestKey, fetchStyleOptions]);
 
   const handleRetryStyle = () => {
+    lastFetchedKeyRef.current = null;
     fetchStyleOptions();
   };
 
-  // Hàm gọi POST /api/guard cho từng phương án
+  // Hàm gọi POST /api/guard cho từng phương án với tham chiếu ổn định tuyệt đối (rỗng dependencies)
   const evaluateOptionGuardian = useCallback(
-    async (pa: StylistPhuongAn) => {
+    async (pa: StylistPhuongAn, isManualRetry = false) => {
+      if (!pa || !pa.token) return;
+
+      // Nếu không phải thao tác bấm thử lại thủ công và token đã có trong hàng đợi/đã gọi -> bỏ qua
+      if (!isManualRetry && evaluatedTokensRef.current.has(pa.token)) {
+        return;
+      }
+
+      // Đánh dấu ngay token để tránh race condition
+      evaluatedTokensRef.current.add(pa.token);
+
       setGuardianStates((prev) => ({
         ...prev,
         [pa.token]: { status: 'loading' },
@@ -191,17 +229,19 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 31000);
 
+      const params = currentParamsRef.current;
+
       try {
         const res = await fetch('/api/guard', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            outfitId: outfit.id,
-            purposeId: boiCanh.id,
-            remixLevel: customization.remixLevel,
-            colorSchemeId: colorScheme.id,
-            selectedAccessoryIds: validSelectedAccessoryIds,
-            weather: customization.weather,
+            outfitId: params.outfitId,
+            purposeId: params.purposeId,
+            remixLevel: params.remixLevel,
+            colorSchemeId: params.colorSchemeId,
+            selectedAccessoryIds: params.selectedAccessoryIds,
+            weather: params.weather,
             phuong_an: {
               ten: pa.ten,
               mo_ta: pa.mo_ta,
@@ -230,6 +270,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         }
 
         if (!res.ok || !data || data.success !== true || !data.guardian) {
+          // Xử lý an toàn khi backend báo 429 hoặc 503: hiển thị "Chưa kiểm tra được", tuyệt đối KHÔNG tự retry
           setGuardianStates((prev) => ({
             ...prev,
             [pa.token]: { status: 'error' },
@@ -246,43 +287,48 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         }));
       } catch {
         window.clearTimeout(timeoutId);
+        // Khi lỗi mạng, timeout: hiển thị an toàn "Chưa kiểm tra được"
         setGuardianStates((prev) => ({
           ...prev,
           [pa.token]: { status: 'error' },
         }));
       }
     },
-    [
-      outfit.id,
-      boiCanh.id,
-      customization.remixLevel,
-      colorScheme.id,
-      validSelectedAccessoryIds,
-      customization.weather,
-    ]
+    []
   );
 
-  // Sau khi có phương án, gọi /api/guard cho từng phương án (song song, tối đa 3)
+  // Sau khi có phương án từ /api/style, gọi /api/guard ĐÚNG 1 LẦN cho mỗi phương án mới (tối đa 3)
   useEffect(() => {
-    if (phuongAnList.length > 0) {
-      phuongAnList.slice(0, 3).forEach((pa) => {
-        evaluateOptionGuardian(pa);
-      });
+    if (!phuongAnList || phuongAnList.length === 0) {
+      return;
     }
+
+    const itemsToEvaluate = phuongAnList.slice(0, 3).filter(
+      (pa) => pa && pa.token && !evaluatedTokensRef.current.has(pa.token)
+    );
+
+    if (itemsToEvaluate.length === 0) {
+      return;
+    }
+
+    // Đánh dấu ngay vào Set trước khi gọi để chặn bất kỳ re-render loop hay duplicate request nào
+    itemsToEvaluate.forEach((pa) => {
+      evaluatedTokensRef.current.add(pa.token);
+    });
+
+    itemsToEvaluate.forEach((pa) => {
+      evaluateOptionGuardian(pa, true);
+    });
   }, [phuongAnList, evaluateOptionGuardian]);
 
-  const renderPhuongAnSource = (maNguon: string | null) => {
-    if (!maNguon) {
-      return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
-    }
-
+  const renderPhuongAnSourceItem = (code: string) => {
     // 1. Nguồn từ KB-v3
-    const kbSrc = KB_NGUON[maNguon];
+    const kbSrc = KB_NGUON[code];
     if (kbSrc) {
       return (
-        <div className="inline-flex flex-wrap items-center gap-1.5">
+        <div key={code} className="inline-flex flex-wrap items-center gap-1.5">
           <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
-            [{maNguon}]
+            [{code}]
           </span>
           {kbSrc.url ? (
             <a
@@ -305,7 +351,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     }
 
     // 2. Nguồn bối cảnh BC-<id_boi_canh>-<n>
-    const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(maNguon);
+    const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(code);
     if (bcMatch) {
       const bcId = bcMatch[1];
       const oneBasedIdx = parseInt(bcMatch[2], 10);
@@ -315,7 +361,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           ? targetBc.nguon[oneBasedIdx - 1]
           : undefined;
 
-      let domain = maNguon;
+      let domain = code;
       if (url) {
         try {
           domain = new URL(url).hostname.replace(/^www\./i, '');
@@ -325,9 +371,9 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       }
 
       return (
-        <div className="inline-flex flex-wrap items-center gap-1.5">
+        <div key={code} className="inline-flex flex-wrap items-center gap-1.5">
           <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
-            [{maNguon}]
+            [{code}]
           </span>
           {url ? (
             <a
@@ -349,7 +395,24 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       );
     }
 
-    return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+    return (
+      <span key={code} className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+        [{code}]
+      </span>
+    );
+  };
+
+  const renderPhuongAnSource = (maNguon: string[] | string | null) => {
+    const list = Array.isArray(maNguon) ? maNguon : maNguon ? [maNguon] : [];
+    if (list.length === 0) {
+      return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+    }
+
+    return (
+      <div className="inline-flex flex-wrap items-center gap-2">
+        {list.map((code) => renderPhuongAnSourceItem(code))}
+      </div>
+    );
   };
 
   const getRemixLevelTitle = (level: 1 | 2 | 3) => {
@@ -649,7 +712,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                                 <div className="flex items-center gap-2 shrink-0">
                                   <GuardianBadge
                                     evaluation={guardianStates[pa.token] || { status: 'loading' }}
-                                    onRetry={() => evaluateOptionGuardian(pa)}
+                                    onRetry={() => evaluateOptionGuardian(pa, true)}
                                   />
                                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A] shrink-0">
                                     Phương án 0{idx + 1}

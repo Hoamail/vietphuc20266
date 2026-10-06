@@ -31,30 +31,34 @@ export interface StylistPhuongAn {
   mo_ta: string;
   thanh_phan: string[];
   ly_do_van_hoa: string;
-  ma_nguon: string | null;
+  ma_nguon: string[];
   goi_y_cua_app: string[];
   exp: number;
   token: string;
   guardian?: GuardianResult;
 }
 
-export type GuardianDanhGia = 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
+export type GuardianNhan = 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
 
 export type GuardianLoaiLyDo =
   | 'lich_su'
-  | 'thong_le'
+  | 'thong_le_ung_xu'
   | 'tham_my'
-  | 'chua_du_can_cu'
+  | 'thieu_can_cu'
   | 'nguyen_tac_app';
 
-export interface GuardianResult {
-  danh_gia: GuardianDanhGia;
-  muc_chac_chan: KBMucChacChan;
-  diem_hai_hoa_mau: number | null;
-  ly_do: string;
-  loai_ly_do: GuardianLoaiLyDo;
+export interface GuardianLyDoItem {
+  noi_dung: string;
+  loai: GuardianLoaiLyDo;
   ma_nguon: string | null;
-  goi_y_sua: string | null;
+}
+
+export interface GuardianResult {
+  nhan: GuardianNhan;
+  diem_hai_hoa_mau: number | null;
+  ly_do: GuardianLyDoItem[];
+  goi_y_sua: string[];
+  do_chac_chan: KBMucChacChan;
 }
 
 export type GuardianStatus = 'idle' | 'loading' | 'success' | 'error';

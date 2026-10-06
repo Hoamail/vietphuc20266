@@ -4,9 +4,25 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI, Type } from '@google/genai';
+import {
+  GoogleGenAI,
+  Type,
+  type GenerateContentParameters,
+  type GenerateContentResponse,
+} from '@google/genai';
 
 dotenv.config();
+
+// Last-resort safety net: never let a stray error take the server down.
+// (Single-line logs only: no API key, prompt or user data.)
+process.on('unhandledRejection', (reason: unknown) => {
+  const msg = typeof (reason as any)?.message === 'string' ? (reason as any).message : String(reason ?? '');
+  console.log(`[Process Diag] unhandledRejection: ${msg.replace(/[\r\n]+/g, ' ').slice(0, 200)}`);
+});
+process.on('uncaughtException', (err: unknown) => {
+  const msg = typeof (err as any)?.message === 'string' ? (err as any).message : String(err ?? '');
+  console.log(`[Process Diag] uncaughtException: ${msg.replace(/[\r\n]+/g, ' ').slice(0, 200)}`);
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +146,125 @@ function resolveGeminiModel(): string {
   return DEFAULT_GEMINI_MODEL;
 }
 
+// ===== Gemini auto-fallback (retry ONCE on 429 / 503 / 500) =====
+// The fallback model is NOT a secret: it is hard-coded here (the app cannot edit AI Studio secrets at runtime).
+// Optional override: add a secret GEMINI_FALLBACK_MODEL (must be in ALLOWED_GEMINI_MODELS).
+// NOTE: 'gemini-1.5-flash' was shut down by Google (Sep 2025) and now returns 404, so it is NOT used.
+const FALLBACK_GEMINI_CANDIDATES = ['gemini-3.1-flash-lite', 'gemini-2.5-flash'];
+const RETRYABLE_GEMINI_STATUSES = new Set<number>([429, 500, 503]);
+
+// First candidate that is allowed and different from the primary model.
+function resolveFallbackModel(primaryModel: string): string | null {
+  const envModel = (process.env.GEMINI_FALLBACK_MODEL || '').trim();
+  for (const m of [envModel, ...FALLBACK_GEMINI_CANDIDATES]) {
+    if (m && m !== primaryModel && ALLOWED_GEMINI_MODELS.has(m)) return m;
+  }
+  return null;
+}
+
+function getGeminiErrorStatus(err: unknown): number | undefined {
+  const e = err as any;
+  if (typeof e?.status === 'number') return e.status;
+  if (typeof e?.code === 'number') return e.code;
+  if (typeof e?.error?.code === 'number') return e.error.code;
+  return undefined;
+}
+
+function isRetryableGeminiError(err: unknown): boolean {
+  const status = getGeminiErrorStatus(err);
+  if (status !== undefined) return RETRYABLE_GEMINI_STATUSES.has(status);
+  const msg = typeof (err as any)?.message === 'string' ? (err as any).message : String(err ?? '');
+  return (
+    /RESOURCE_EXHAUSTED|UNAVAILABLE|INTERNAL|"code"\s*:\s*(429|500|503)/.test(msg) ||
+    /high demand|overloaded|resource has been exhausted/i.test(msg)
+  );
+}
+
+// Final error thrown by generateWithFallback; keeps status/message so the routes' catch blocks keep working.
+class GeminiCallError extends Error {
+  status?: number;
+  modelTried: string;
+  constructor(original: unknown, modelTried: string) {
+    const o = original as any;
+    super(typeof o?.message === 'string' ? o.message : String(original ?? ''));
+    this.name = o?.name === 'AbortError' ? 'AbortError' : 'GeminiCallError';
+    this.status = getGeminiErrorStatus(original);
+    this.modelTried = modelTried;
+  }
+}
+
+async function callGeminiWithTimeout(
+  ai: GoogleGenAI,
+  params: GenerateContentParameters
+): Promise<GenerateContentResponse> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('GEMINI_TIMEOUT')), GEMINI_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([ai.models.generateContent(params), timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// 1st call: primary model. If it fails with 429/503/500 -> ONE retry with the fallback model,
+// same contents + config (systemInstruction, responseSchema, temperature, maxOutputTokens).
+async function generateWithFallback(
+  ai: GoogleGenAI,
+  params: Omit<GenerateContentParameters, 'model'>,
+  tag: string
+): Promise<{ response: GenerateContentResponse; modelUsed: string }> {
+  const primaryModel = resolveGeminiModel();
+  try {
+    const response = await callGeminiWithTimeout(ai, { ...params, model: primaryModel });
+    return { response, modelUsed: primaryModel };
+  } catch (primaryErr: unknown) {
+    const fallbackModel = resolveFallbackModel(primaryModel);
+    if (!fallbackModel || !isRetryableGeminiError(primaryErr)) {
+      throw new GeminiCallError(primaryErr, primaryModel);
+    }
+    console.log(
+      `[${tag}] Primary model failed, retrying with fallback model... (primary=${primaryModel} status=${
+        getGeminiErrorStatus(primaryErr) ?? 'none'
+      } fallback=${fallbackModel})`
+    );
+    try {
+      const response = await callGeminiWithTimeout(ai, { ...params, model: fallbackModel });
+      return { response, modelUsed: fallbackModel };
+    } catch (fallbackErr: unknown) {
+      throw new GeminiCallError(fallbackErr, fallbackModel);
+    }
+  }
+}
+
+// Wraps an async Express handler so an unexpected throw can never crash the process
+// or leave the request hanging: the front-end always gets the safe error shape.
+function safeAsyncRoute(
+  handler: (req: express.Request, res: express.Response) => Promise<unknown>
+): express.RequestHandler {
+  return (req, res) => {
+    Promise.resolve()
+      .then(() => handler(req, res))
+      .catch((err: unknown) => {
+        try {
+          const msg = typeof (err as any)?.message === 'string' ? (err as any).message : String(err ?? '');
+          console.log(`[Route Diag] unhandled error: ${msg.replace(/[\r\n]+/g, ' ').slice(0, 200)}`);
+          if (!res.headersSent) {
+            res.status(503).json({
+              success: false,
+              error: 'chua_kiem_tra_duoc',
+              reason: 'service_error',
+              message: 'Chưa kiểm tra được',
+            });
+          }
+        } catch {
+          /* swallow: nothing more we can do for this request */
+        }
+      });
+  };
+}
+
 // Per-IP Rate Limiter (20 requests per minute) & Daily Cap (default 400)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
@@ -154,18 +289,22 @@ interface PhuongAnCore {
   mo_ta: string;
   thanh_phan: string[];
   ly_do_van_hoa: string;
-  ma_nguon: string | null;
+  ma_nguon: string[];
   goi_y_cua_app: string[];
 }
 
-interface GuardianCoreResult {
-  danh_gia: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
-  muc_chac_chan: 'cao' | 'trung_binh' | 'thap';
-  diem_hai_hoa_mau: number | null;
-  ly_do: string;
-  loai_ly_do: 'lich_su' | 'thong_le' | 'tham_my' | 'chua_du_can_cu' | 'nguyen_tac_app';
+interface GuardianLyDoItemCore {
+  noi_dung: string;
+  loai: 'lich_su' | 'thong_le_ung_xu' | 'tham_my' | 'thieu_can_cu' | 'nguyen_tac_app';
   ma_nguon: string | null;
-  goi_y_sua: string | null;
+}
+
+interface GuardianCoreResult {
+  nhan: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
+  diem_hai_hoa_mau: number | null;
+  ly_do: GuardianLyDoItemCore[];
+  goi_y_sua: string[];
+  do_chac_chan: 'cao' | 'trung_binh' | 'thap';
 }
 
 const styleCache = new Map<string, { phuongAn: PhuongAnCore[]; expiresAt: number }>();
@@ -281,14 +420,13 @@ function isValidShortString(val: unknown): val is string {
 }
 
 const STYLIST_SYSTEM_INSTRUCTION = [
-  'Bạn là Stylist tư vấn phối trang phục truyền thống Việt Nam của ứng dụng Việt Phục Remix.',
-  'RÀNG BUỘC BẤT BIẾN (BẮT BUỘC TUÂN THỦ):',
-  '1. Nguồn sự thật duy nhất là phần DỮ LIỆU được cung cấp trong prompt (từ kb-v3.json và boi-canh.json). Không tự thêm, đổi hay suy diễn thông tin lịch sử, văn hoá hay quy tắc ứng xử ngoài DỮ LIỆU; nếu thông tin không có trong DỮ LIỆU thì ghi rõ "Chưa có nguồn".',
-  '2. Mức chắc chắn chỉ có 3 giá trị: cao / trung_binh / thap. KHÔNG hiển thị số phần trăm (%) về độ chắc chắn hay độ tin cậy ở bất kỳ đâu.',
-  '3. Mọi lời khuyên phối đồ ứng dụng hoặc thông lệ ứng xử không dùng các từ tuyệt đối ("tuyệt đối", "bắt buộc", "luôn"). Mỗi dòng trong mảng goi_y_cua_app phải bắt đầu bằng "Gợi ý của app:".',
-  '4. Không dùng thuật ngữ "hữu nhậm" hoặc "tả nhậm"; nếu mô tả chiều vạt áo thì diễn đạt bằng hình thức (ví dụ: vạt trái phủ ngoài vạt phải).',
-  '5. Tạo từ 2 đến 3 phương án phối đồ (phuong_an) phù hợp với trang phục, bối cảnh, mức độ cách tân, bảng màu, phụ kiện và điều kiện thời tiết đã chọn.',
-  '6. Trường ma_nguon của mỗi phương án CHỈ được nhận đúng 1 mã nguồn có trong DỮ LIỆU (ví dụ mã nguồn KB như "S01" hoặc mã nguồn bối cảnh như "BC-di_chua_noi_ton_nghiem-1"), hoặc null nếu không có nguồn trực tiếp.',
+  'Bạn là Stylist của app "Việt phục Remix". Chỉ dùng dữ kiện trong phần DỮ LIỆU (mục trang phục và mục bối cảnh) được cung cấp.',
+  '- Đề xuất 2–3 phương án phối khác nhau rõ rệt, hợp với bối cảnh, mức cách tân, màu và điều kiện người dùng đã chọn.',
+  '- Cấu tạo, thời kỳ, đặc điểm nhận diện: chỉ lấy từ DỮ LIỆU, kèm mã nguồn trong ma_nguon.',
+  '- Phụ kiện và cách phối lấy từ goi_y_phoi_do hoặc lựa chọn của người dùng: ghi trong goi_y_cua_app, mỗi dòng bắt đầu bằng "Gợi ý của app:". Đây là gợi ý phong cách, không phải sự thật lịch sử.',
+  '- Quy tắc theo bối cảnh là thông lệ, hãy nói rõ "thông lệ, không phải quy định".',
+  '- Không bịa. Thiếu dữ liệu thì nói "chưa có nguồn". Không dùng từ tuyệt đối, không nêu số phần trăm, không phán xét người dùng, không nhắc trang phục nước khác.',
+  '- Giọng thân thiện, ngắn gọn, tiếng Việt.',
 ].join('\n');
 
 const STYLIST_RESPONSE_SCHEMA = {
@@ -300,32 +438,20 @@ const STYLIST_RESPONSE_SCHEMA = {
       items: {
         type: Type.OBJECT,
         properties: {
-          ten: {
-            type: Type.STRING,
-            description: 'Tên phương án phối đồ ngắn gọn, rõ ràng.',
-          },
-          mo_ta: {
-            type: Type.STRING,
-            description: 'Mô tả tổng thể cách phối theo bối cảnh, mức cách tân và điều kiện thời tiết.',
-          },
+          ten: { type: Type.STRING },
+          mo_ta: { type: Type.STRING },
           thanh_phan: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: 'Danh sách các thành phần cụ thể của phương án (trang phục chính, màu sắc, phụ kiện đi kèm).',
           },
-          ly_do_van_hoa: {
-            type: Type.STRING,
-            description: 'Lý giải sự phù hợp dựa trên dữ liệu KB và lưu ý bối cảnh; không tự suy diễn ngoài dữ liệu, nếu không có nguồn thì ghi "Chưa có nguồn".',
-          },
+          ly_do_van_hoa: { type: Type.STRING },
           ma_nguon: {
-            type: Type.STRING,
-            nullable: true,
-            description: 'Một mã nguồn hợp lệ có trong DỮ LIỆU (mã KB như S01 hoặc mã bối cảnh BC-...) hoặc null.',
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
           },
           goi_y_cua_app: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: 'Các gợi ý phối đồ thực tế của ứng dụng, mỗi dòng bắt đầu bằng "Gợi ý của app:".',
           },
         },
         required: ['ten', 'mo_ta', 'thanh_phan', 'ly_do_van_hoa', 'ma_nguon', 'goi_y_cua_app'],
@@ -361,126 +487,144 @@ function sanitizeSuggestionLine(line: string): string {
 }
 
 const GUARDIAN_SYSTEM_INSTRUCTION = [
-  'Bạn là Cultural Guardian (Bảo Chứng Văn Hoá) của ứng dụng Việt Phục Remix, chịu trách nhiệm thẩm định tính hài hoà, chuẩn mực và bảo chứng văn hoá của từng phương án phối đồ truyền thống Việt Nam.',
-  'RÀNG BUỘC BẤT BIẾN (BẮT BUỘC TUÂN THỦ):',
-  '1. Nguồn sự thật duy nhất là phần DỮ LIỆU được cung cấp trong prompt (từ kb-v3.json và boi-canh.json). Không tự thêm, đổi hay suy diễn thông tin lịch sử, văn hoá hay quy tắc ứng xử ngoài DỮ LIỆU; nếu thông tin không có trong DỮ LIỆU thì ghi rõ "Chưa có nguồn".',
-  '2. Mức chắc chắn chỉ có 3 giá trị: cao / trung_binh / thap. KHÔNG hiển thị số phần trăm (%) về độ chắc chắn hay độ tin cậy ở bất kỳ đâu.',
-  '3. Mọi lời khuyên phối đồ ứng dụng hoặc thông lệ ứng xử không dùng các từ tuyệt đối ("tuyệt đối", "bắt buộc", "luôn").',
-  '4. Không dùng thuật ngữ "hữu nhậm" hoặc "tả nhậm"; nếu mô tả chiều vạt áo thì diễn đạt bằng hình thức (ví dụ: vạt trái phủ ngoài vạt phải).',
-  '5. Phân loại đánh giá (danh_gia):',
-  '   - hai_hoa: Bản phối tôn trọng cấu trúc cốt lõi của trang phục, màu sắc và phụ kiện phù hợp tinh thần bối cảnh.',
-  '   - can_luu_y: Bản phối có điểm cần lưu ý về bối cảnh (như nơi tôn nghiêm), điều kiện thời tiết hoặc thông lệ ứng xử, nhưng chưa làm sai lệch cấu trúc cổ áo hay vạt áo.',
-  '   - de_sai_lech: Bản phối vi phạm điều không nên khi remix từ KB (như thay đổi kết cấu nhận diện cốt lõi) hoặc vi phạm nghiêm trọng tính tôn nghiêm của bối cảnh.',
-  '6. Trường ma_nguon CHỈ được nhận đúng 1 mã nguồn có trong DỮ LIỆU (ví dụ mã KB như S01 hoặc mã bối cảnh như BC-di_chua_noi_ton_nghiem-1), hoặc null nếu không có nguồn trực tiếp.',
-  '7. diem_hai_hoa_mau: điểm hài hoà màu sắc từ 1 đến 10 (số nguyên), hoặc null nếu không đánh giá được.',
-  '8. loai_ly_do: chọn đúng 1 trong 5 loại: lich_su, thong_le, tham_my, chua_du_can_cu, nguyen_tac_app.',
+  'Bạn là Cultural Guardian. Chấm MỘT phương án phối, chỉ dựa trên DỮ LIỆU được cung cấp.',
+  '- nhan = de_sai_lech CHỈ khi phương án vi phạm một quy tắc có loai_quy_tac = "lich_su" kèm mã nguồn trong DỮ LIỆU.',
+  '- nhan = can_luu_y khi: có thông lệ theo bối cảnh liên quan đến phương án (loai thong_le_ung_xu); hoặc phụ kiện hay cách phối không có trong dữ liệu.',
+  '- Mức chắc chắn của dữ liệu thể hiện qua do_chac_chan, không tự động hạ nhãn.',
+  '- nhan = hai_hoa khi không có điểm nào cần lưu ý trong dữ liệu.',
+  '- Quy tắc tham_my chỉ là nhận xét nhẹ, ghi rõ "gợi ý thẩm mỹ", không dùng để kết luận sai lệch văn hoá.',
+  '- Mỗi lý do ghi loai và ma_nguon (mã trong DỮ LIỆU hoặc null). Quy tắc của app (ví dụ yếm chỉ là lớp trong) ghi loai = nguyen_tac_app.',
+  '- Nếu dữ liệu không đủ: thêm một lý do loai = thieu_can_cu với nội dung "chưa đủ căn cứ trong dữ liệu hiện có", diem_hai_hoa_mau = null, do_chac_chan = thap.',
+  '- Không bịa quy tắc, quy định hay độ tuổi không có trong dữ liệu.',
 ].join('\n');
 
 const GUARDIAN_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    danh_gia: {
+    nhan: {
       type: Type.STRING,
       enum: ['hai_hoa', 'can_luu_y', 'de_sai_lech'],
-      description: 'Đánh giá bảo chứng văn hoá: hai_hoa (Hài hoà), can_luu_y (Cần lưu ý), de_sai_lech (Dễ sai lệch văn hoá).',
-    },
-    muc_chac_chan: {
-      type: Type.STRING,
-      enum: ['cao', 'trung_binh', 'thap'],
-      description: 'Mức chắc chắn của đánh giá: cao, trung_binh, hoặc thap. Tuyệt đối không dùng số phần trăm.',
     },
     diem_hai_hoa_mau: {
-      type: Type.INTEGER,
+      type: Type.NUMBER,
       nullable: true,
-      description: 'Điểm hài hoà màu sắc từ 1 đến 10 dựa trên bối cảnh và chất liệu, hoặc null nếu không đủ căn cứ.',
     },
     ly_do: {
-      type: Type.STRING,
-      description: 'Lý do đánh giá cụ thể dựa trên DỮ LIỆU. Không tự suy diễn; không có trong dữ liệu ghi "Chưa có nguồn".',
-    },
-    loai_ly_do: {
-      type: Type.STRING,
-      enum: ['lich_su', 'thong_le', 'tham_my', 'chua_du_can_cu', 'nguyen_tac_app'],
-      description: 'Phân loại loại lý do: lich_su (Lịch sử), thong_le (Thông lệ, không phải quy định), tham_my (Gợi ý thẩm mỹ), chua_du_can_cu (Chưa đủ căn cứ), nguyen_tac_app (Nguyên tắc của app).',
-    },
-    ma_nguon: {
-      type: Type.STRING,
-      nullable: true,
-      description: 'Một mã nguồn duy nhất hợp lệ có trong DỮ LIỆU (mã KB như S01 hoặc mã bối cảnh như BC-...) hoặc null.',
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          noi_dung: { type: Type.STRING },
+          loai: {
+            type: Type.STRING,
+            enum: ['lich_su', 'thong_le_ung_xu', 'tham_my', 'thieu_can_cu', 'nguyen_tac_app'],
+          },
+          ma_nguon: { type: Type.STRING, nullable: true },
+        },
+        required: ['noi_dung', 'loai', 'ma_nguon'],
+      },
     },
     goi_y_sua: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+    },
+    do_chac_chan: {
       type: Type.STRING,
-      nullable: true,
-      description: 'Gợi ý điều chỉnh nếu cần để phương án chuẩn mực hoặc đẹp hơn, không dùng từ tuyệt đối.',
+      enum: ['cao', 'trung_binh', 'thap'],
     },
   },
-  required: ['danh_gia', 'muc_chac_chan', 'ly_do', 'loai_ly_do', 'ma_nguon'],
+  required: ['nhan', 'diem_hai_hoa_mau', 'ly_do', 'goi_y_sua', 'do_chac_chan'],
 };
 
 function sanitizeGuardianResult(
   raw: any,
   allowedSourceCodes: Set<string>
 ): GuardianCoreResult {
-  let danhGia: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech' = 'can_luu_y';
-  if (raw?.danh_gia === 'hai_hoa' || raw?.danh_gia === 'de_sai_lech') {
-    danhGia = raw.danh_gia;
+  let nhan: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech' = 'can_luu_y';
+  if (raw?.nhan === 'hai_hoa' || raw?.nhan === 'de_sai_lech') {
+    nhan = raw.nhan;
   }
 
-  let mucChacChan: 'cao' | 'trung_binh' | 'thap' = 'trung_binh';
-  if (raw?.muc_chac_chan === 'cao' || raw?.muc_chac_chan === 'thap') {
-    mucChacChan = raw.muc_chac_chan;
+  let doChacChan: 'cao' | 'trung_binh' | 'thap' = 'trung_binh';
+  if (raw?.do_chac_chan === 'cao' || raw?.do_chac_chan === 'thap') {
+    doChacChan = raw.do_chac_chan;
   }
 
-  const validLoai = new Set(['lich_su', 'thong_le', 'tham_my', 'chua_du_can_cu', 'nguyen_tac_app']);
-  const loaiLyDo: 'lich_su' | 'thong_le' | 'tham_my' | 'chua_du_can_cu' | 'nguyen_tac_app' =
-    validLoai.has(raw?.loai_ly_do) ? raw.loai_ly_do : 'thong_le';
+  const validLoai = new Set(['lich_su', 'thong_le_ung_xu', 'tham_my', 'thieu_can_cu', 'nguyen_tac_app']);
+  const sanitizedLyDo: GuardianLyDoItemCore[] = [];
 
-  let rawLyDo = typeof raw?.ly_do === 'string' && raw.ly_do.trim() ? raw.ly_do : 'Chưa có nguồn';
-  let lyDo = sanitizeTextConstraints(
-    rawLyDo
-      .replace(/\btuyệt đối\b/gi, 'nên')
-      .replace(/\bbắt buộc\b/gi, 'khuyến khích')
-      .replace(/\bluôn luôn\b/gi, 'thường')
-      .replace(/\bluôn\b/gi, 'thường')
-  );
+  if (Array.isArray(raw?.ly_do)) {
+    for (const item of raw.ly_do) {
+      if (!item || typeof item !== 'object') continue;
+      let noiDung = typeof item.noi_dung === 'string' ? item.noi_dung : '';
+      noiDung = sanitizeTextConstraints(
+        noiDung
+          .replace(/\btuyệt đối\b/gi, 'nên')
+          .replace(/\bbắt buộc\b/gi, 'khuyến khích')
+          .replace(/\bluôn luôn\b/gi, 'thường')
+          .replace(/\bluôn\b/gi, 'thường')
+      );
+      if (!noiDung.trim()) continue;
 
-  let maNguon: string | null = null;
-  if (typeof raw?.ma_nguon === 'string' && raw.ma_nguon.trim()) {
-    const candidate = raw.ma_nguon.trim().replace(/^\[|\]$/g, '');
-    if (allowedSourceCodes.has(candidate)) {
-      maNguon = candidate;
+      const loai: 'lich_su' | 'thong_le_ung_xu' | 'tham_my' | 'thieu_can_cu' | 'nguyen_tac_app' =
+        validLoai.has(item.loai) ? item.loai : 'thong_le_ung_xu';
+
+      let maNguon: string | null = null;
+      if (typeof item.ma_nguon === 'string' && item.ma_nguon.trim()) {
+        const candidate = item.ma_nguon.trim().replace(/^\[|\]$/g, '');
+        if (allowedSourceCodes.has(candidate)) {
+          maNguon = candidate;
+        }
+      }
+
+      sanitizedLyDo.push({
+        noi_dung: noiDung,
+        loai,
+        ma_nguon: maNguon,
+      });
     }
+  }
+
+  if (sanitizedLyDo.length === 0) {
+    sanitizedLyDo.push({
+      noi_dung: 'chưa đủ căn cứ trong dữ liệu hiện có',
+      loai: 'thieu_can_cu',
+      ma_nguon: null,
+    });
   }
 
   let diemHaiHoaMau: number | null = null;
   if (
     typeof raw?.diem_hai_hoa_mau === 'number' &&
-    Number.isInteger(raw.diem_hai_hoa_mau) &&
-    raw.diem_hai_hoa_mau >= 1 &&
+    Number.isFinite(raw.diem_hai_hoa_mau) &&
+    raw.diem_hai_hoa_mau >= 0 &&
     raw.diem_hai_hoa_mau <= 10
   ) {
-    diemHaiHoaMau = raw.diem_hai_hoa_mau;
+    diemHaiHoaMau = Math.round(raw.diem_hai_hoa_mau);
   }
 
-  let goiYSua: string | null = null;
-  if (typeof raw?.goi_y_sua === 'string' && raw.goi_y_sua.trim()) {
-    goiYSua = sanitizeTextConstraints(
-      raw.goi_y_sua
-        .replace(/\btuyệt đối\b/gi, 'nên')
-        .replace(/\bbắt buộc\b/gi, 'khuyến khích')
-        .replace(/\bluôn luôn\b/gi, 'thường')
-        .replace(/\bluôn\b/gi, 'thường')
-    );
+  const sanitizedGoiYSua: string[] = [];
+  if (Array.isArray(raw?.goi_y_sua)) {
+    for (const s of raw.goi_y_sua) {
+      if (typeof s === 'string' && s.trim()) {
+        const cleaned = sanitizeTextConstraints(
+          s
+            .replace(/\btuyệt đối\b/gi, 'nên')
+            .replace(/\bbắt buộc\b/gi, 'khuyến khích')
+            .replace(/\bluôn luôn\b/gi, 'thường')
+            .replace(/\bluôn\b/gi, 'thường')
+        );
+        if (cleaned) sanitizedGoiYSua.push(cleaned);
+      }
+    }
   }
 
   return {
-    danh_gia: danhGia,
-    muc_chac_chan: mucChacChan,
+    nhan,
     diem_hai_hoa_mau: diemHaiHoaMau,
-    ly_do: lyDo,
-    loai_ly_do: loaiLyDo,
-    ma_nguon: maNguon,
-    goi_y_sua: goiYSua,
+    ly_do: sanitizedLyDo,
+    goi_y_sua: sanitizedGoiYSua,
+    do_chac_chan: doChacChan,
   };
 }
 
@@ -563,7 +707,7 @@ async function startServer() {
   });
 
   // B4: Stylist structured output endpoint
-  app.post('/api/style', async (req, res) => {
+  app.post('/api/style', safeAsyncRoute(async (req, res) => {
     const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
     const rateStatus = checkIpRateLimit(clientIp);
     if (!rateStatus.allowed) {
@@ -887,19 +1031,12 @@ async function startServer() {
 
     incrementDailyCap();
 
-    const modelName = resolveGeminiModel();
+    let modelName = resolveGeminiModel();
 
     try {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error('GEMINI_TIMEOUT'));
-        }, GEMINI_TIMEOUT_MS);
-      });
-
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model: modelName,
+      const { response, modelUsed } = await generateWithFallback(
+        ai,
+        {
           contents: dataPrompt,
           config: {
             systemInstruction: STYLIST_SYSTEM_INSTRUCTION,
@@ -908,11 +1045,10 @@ async function startServer() {
             temperature: 0.4,
             maxOutputTokens: 8192,
           },
-        }),
-        timeoutPromise,
-      ]);
-
-      if (timeoutId) clearTimeout(timeoutId);
+        },
+        'Stylist'
+      );
+      modelName = modelUsed;
 
       const rawText = typeof response?.text === 'string' ? response.text.trim() : '';
       if (!rawText) {
@@ -1001,12 +1137,21 @@ async function startServer() {
           });
         }
 
-        // Rule 1 & 6: ma_nguon must be a valid KB code or BC-<id>-<n> code, otherwise null
-        let validMaNguon: string | null = null;
-        if (typeof item.ma_nguon === 'string' && item.ma_nguon.trim()) {
+        // ma_nguon in Stylist schema is array of string
+        let validMaNguonList: string[] = [];
+        if (Array.isArray(item.ma_nguon)) {
+          for (const m of item.ma_nguon) {
+            if (typeof m === 'string' && m.trim()) {
+              const candidate = m.trim().replace(/^\[|\]$/g, '');
+              if (allowedSourceCodes.has(candidate) && !validMaNguonList.includes(candidate)) {
+                validMaNguonList.push(candidate);
+              }
+            }
+          }
+        } else if (typeof item.ma_nguon === 'string' && item.ma_nguon.trim()) {
           const candidate = item.ma_nguon.trim().replace(/^\[|\]$/g, '');
           if (allowedSourceCodes.has(candidate)) {
-            validMaNguon = candidate;
+            validMaNguonList.push(candidate);
           }
         }
 
@@ -1015,7 +1160,7 @@ async function startServer() {
           mo_ta: sanitizeTextConstraints(item.mo_ta),
           thanh_phan: thanhPhan,
           ly_do_van_hoa: sanitizeTextConstraints(item.ly_do_van_hoa),
-          ma_nguon: validMaNguon,
+          ma_nguon: validMaNguonList,
           goi_y_cua_app: goiYCuaApp,
         });
       }
@@ -1044,6 +1189,7 @@ async function startServer() {
         phuong_an: signedPhuongAn,
       });
     } catch (err: any) {
+      if (err instanceof GeminiCallError) modelName = err.modelTried;
       const statusNum =
         typeof err?.status === 'number'
           ? err.status
@@ -1057,29 +1203,36 @@ async function startServer() {
       console.log(`[Stylist Diag] model=${modelName} status=${statusNum ?? 'none'} message=${safeMsg}`);
 
       let reason = 'unknown';
+      const isQuotaExhausted =
+        statusNum === 429 ||
+        errMsgRaw.includes('429') ||
+        errMsgRaw.includes('Resource has been exhausted') ||
+        errMsgRaw.includes('quota') ||
+        err?.error?.code === 429;
+
       if (errMsgRaw === 'GEMINI_TIMEOUT' || err?.name === 'AbortError') {
         reason = 'timeout';
       } else if (statusNum === 404) {
         reason = 'model_not_found';
       } else if (statusNum === 401 || statusNum === 403) {
         reason = 'permission';
-      } else if (statusNum === 429) {
+      } else if (isQuotaExhausted) {
         reason = 'quota';
       } else if (typeof statusNum === 'number') {
         reason = `http_${statusNum}`;
       }
 
-      return res.status(503).json({
+      return res.status(isQuotaExhausted ? 429 : 503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
         reason,
         message: 'Chưa kiểm tra được',
       });
     }
-  });
+  }));
 
   // B6: Cultural Guardian endpoint for evaluating each styling option
-  app.post('/api/guard', async (req, res) => {
+  app.post('/api/guard', safeAsyncRoute(async (req, res) => {
     const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
     const rateStatus = checkIpRateLimit(clientIp);
     if (!rateStatus.allowed) {
@@ -1247,7 +1400,11 @@ async function startServer() {
         ? targetPhuongAn.thanh_phan.filter((x: unknown) => typeof x === 'string')
         : [],
       ly_do_van_hoa: typeof targetPhuongAn.ly_do_van_hoa === 'string' ? targetPhuongAn.ly_do_van_hoa : '',
-      ma_nguon: typeof targetPhuongAn.ma_nguon === 'string' ? targetPhuongAn.ma_nguon : null,
+      ma_nguon: Array.isArray(targetPhuongAn.ma_nguon)
+        ? targetPhuongAn.ma_nguon.filter((x: unknown) => typeof x === 'string')
+        : typeof targetPhuongAn.ma_nguon === 'string' && targetPhuongAn.ma_nguon
+        ? [targetPhuongAn.ma_nguon]
+        : [],
       goi_y_cua_app: Array.isArray(targetPhuongAn.goi_y_cua_app)
         ? targetPhuongAn.goi_y_cua_app.filter((x: unknown) => typeof x === 'string')
         : [],
@@ -1429,26 +1586,19 @@ async function startServer() {
       `- Gợi ý của app đi kèm: ${paCore.goi_y_cua_app.join('; ')}`,
       `- Mô tả tổng thể: ${paCore.mo_ta}`,
       `- Căn cứ văn hoá ban đầu: ${paCore.ly_do_van_hoa}`,
-      `- Mã nguồn ban đầu: ${paCore.ma_nguon || 'Chưa có nguồn'}`,
+      `- Mã nguồn ban đầu: ${paCore.ma_nguon.length > 0 ? paCore.ma_nguon.join(', ') : 'Chưa có nguồn'}`,
       '',
       'Hãy đối chiếu phương án phối đồ trên với toàn bộ DỮ LIỆU và đưa ra đánh giá bảo chứng văn hoá (Cultural Guardian) đúng theo schema JSON.',
     ].join('\n');
 
     incrementDailyCap();
 
-    const modelName = resolveGeminiModel();
+    let modelName = resolveGeminiModel();
 
     try {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error('GEMINI_TIMEOUT'));
-        }, GEMINI_TIMEOUT_MS);
-      });
-
-      const response = await Promise.race([
-        ai.models.generateContent({
-          model: modelName,
+      const { response, modelUsed } = await generateWithFallback(
+        ai,
+        {
           contents: guardianPrompt,
           config: {
             systemInstruction: GUARDIAN_SYSTEM_INSTRUCTION,
@@ -1457,11 +1607,10 @@ async function startServer() {
             temperature: 0.2,
             maxOutputTokens: 4096,
           },
-        }),
-        timeoutPromise,
-      ]);
-
-      if (timeoutId) clearTimeout(timeoutId);
+        },
+        'Guardian'
+      );
+      modelName = modelUsed;
 
       const rawText = typeof response?.text === 'string' ? response.text.trim() : '';
       if (!rawText) {
@@ -1510,6 +1659,7 @@ async function startServer() {
         guardian: sanitized,
       });
     } catch (err: any) {
+      if (err instanceof GeminiCallError) modelName = err.modelTried;
       const statusNum =
         typeof err?.status === 'number'
           ? err.status
@@ -1521,13 +1671,21 @@ async function startServer() {
 
       console.log(`[Guardian Diag] model=${modelName} status=${statusNum ?? 'none'} message=${safeMsg}`);
 
-      return res.status(503).json({
+      const isQuotaExhausted =
+        statusNum === 429 ||
+        errMsgRaw.includes('429') ||
+        errMsgRaw.includes('Resource has been exhausted') ||
+        errMsgRaw.includes('quota') ||
+        err?.error?.code === 429;
+
+      return res.status(isQuotaExhausted ? 429 : 503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
+        reason: isQuotaExhausted ? 'quota' : 'service_error',
         message: 'Chưa kiểm tra được',
       });
     }
-  });
+  }));
 
   // In production with built dist, serve static assets
   const distPath = path.resolve(__dirname, 'dist');

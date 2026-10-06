@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck,
-  Info,
   BookOpen,
   AlertTriangle,
   CheckCircle2,
@@ -19,11 +18,11 @@ export function getGuardianLoaiLyDoLabel(loai?: GuardianLoaiLyDo | string): stri
   switch (loai) {
     case 'lich_su':
       return 'Lịch sử';
-    case 'thong_le':
+    case 'thong_le_ung_xu':
       return 'Thông lệ, không phải quy định';
     case 'tham_my':
       return 'Gợi ý thẩm mỹ';
-    case 'chua_du_can_cu':
+    case 'thieu_can_cu':
       return 'Chưa đủ căn cứ';
     case 'nguyen_tac_app':
       return 'Nguyên tắc của app';
@@ -130,7 +129,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
       icon: <AlertTriangle className="w-3.5 h-3.5 text-[#C88E1B] shrink-0" />,
     };
 
-    if (result.danh_gia === 'hai_hoa') {
+    if (result.nhan === 'hai_hoa') {
       badgeText = 'Hài hoà';
       badgeStyle = {
         bg: 'bg-[#E9F2EE]',
@@ -139,7 +138,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
         hover: 'hover:bg-[#D9EAE2]',
         icon: <ShieldCheck className="w-3.5 h-3.5 text-[#2E6254] shrink-0" />,
       };
-    } else if (result.danh_gia === 'de_sai_lech') {
+    } else if (result.nhan === 'de_sai_lech') {
       badgeText = 'Dễ sai lệch văn hoá';
       badgeStyle = {
         bg: 'bg-[#FBEFEF]',
@@ -305,7 +304,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
   onClose,
 }) => {
   const getDanhGiaBadge = () => {
-    switch (result.danh_gia) {
+    switch (result.nhan) {
       case 'hai_hoa':
         return {
           label: 'Hài hoà',
@@ -320,7 +319,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           bg: 'bg-[#FDF9F0]',
           text: 'text-[#8B5A2B]',
           border: 'border-[#C88E1B]/35',
-          desc: 'Có điểm cần lưu ý về điều kiện di chuyển, không gian hoặc thông lệ ứng xử.',
+          desc: 'Có điểm cần lưu ý về thông lệ ứng xử theo bối cảnh hoặc cách phối đồ.',
         };
       case 'de_sai_lech':
       default:
@@ -329,7 +328,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           bg: 'bg-[#FBEFEF]',
           text: 'text-[#B93826]',
           border: 'border-[#B93826]/30',
-          desc: 'Bản phối có nguy cơ vi phạm điều kỵ hoặc làm sai lệch kết cấu nhận diện cốt lõi của trang phục.',
+          desc: 'Bản phối có nguy cơ vi phạm quy tắc lịch sử hoặc làm sai lệch kết cấu nhận diện cốt lõi của trang phục.',
         };
     }
   };
@@ -344,7 +343,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
     const kbSrc = KB_NGUON[maNguon];
     if (kbSrc) {
       return (
-        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+        <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
           <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
             [{maNguon}]
           </span>
@@ -378,7 +377,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           : undefined;
 
       return (
-        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+        <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
           <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
             [{maNguon}]
           </span>
@@ -403,9 +402,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
     }
 
     return (
-      <div className="flex items-center gap-1.5 mt-1">
-        <span className="font-mono font-bold text-[#1E3F5A]">[{maNguon}]</span>
-      </div>
+      <span className="font-mono font-bold text-[#1E3F5A]">[{maNguon}]</span>
     );
   };
 
@@ -444,7 +441,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
                 {badge.label}
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A]">
-                Mức chắc chắn: {getGuardianCertaintyLabel(result.muc_chac_chan)}
+                Mức chắc chắn: {getGuardianCertaintyLabel(result.do_chac_chan)}
               </span>
             </div>
           </div>
@@ -468,32 +465,44 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           </div>
         )}
 
-        {/* Reason (ly_do) with Type Tag */}
-        <div className="p-3.5 rounded-xl bg-white border border-[#DED7C6] mb-3 space-y-1.5 text-xs">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="font-bold text-[#1E3F5A]">Lý do thẩm định:</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#6C7A87]">
-              {getGuardianLoaiLyDoLabel(result.loai_ly_do)}
-            </span>
+        {/* Reasons (ly_do list) */}
+        <div className="space-y-2.5 mb-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
+            Lý do thẩm định ({result.ly_do.length}):
           </div>
-          <p className="text-[#3E4A56] leading-relaxed">
-            {result.ly_do}
-          </p>
-        </div>
-
-        {/* Source citation */}
-        <div className="p-3 rounded-xl bg-white border border-[#DED7C6] mb-3 text-xs">
-          <span className="font-bold text-[#1E3F5A] block">Nguồn đối chiếu:</span>
-          {renderSourceContent(result.ma_nguon)}
+          {result.ly_do.map((item, idx) => (
+            <div
+              key={idx}
+              className="p-3.5 rounded-xl bg-white border border-[#DED7C6] space-y-1.5 text-xs"
+            >
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#6C7A87]">
+                  {getGuardianLoaiLyDoLabel(item.loai)}
+                </span>
+                <span className="text-[10px] text-[#7A8691]">Mục 0{idx + 1}</span>
+              </div>
+              <p className="text-[#3E4A56] leading-relaxed">
+                {item.noi_dung}
+              </p>
+              <div className="pt-1 border-t border-[#F0EBE0] text-[11px] flex flex-wrap items-center gap-1.5">
+                <span className="font-semibold text-[#6C7A87]">Nguồn:</span>
+                {renderSourceContent(item.ma_nguon)}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Suggested adjustment (goi_y_sua) */}
-        {result.goi_y_sua && (
-          <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/30 mb-4 text-xs space-y-1">
+        {result.goi_y_sua && result.goi_y_sua.length > 0 && (
+          <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/30 mb-4 text-xs space-y-1.5">
             <div className="font-bold text-[#8B5A2B]">Gợi ý điều chỉnh:</div>
-            <p className="text-[#5A4630] leading-relaxed">
-              {result.goi_y_sua}
-            </p>
+            <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
+              {result.goi_y_sua.map((g, idx) => (
+                <li key={idx} className="leading-relaxed">
+                  {g}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
