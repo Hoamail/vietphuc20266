@@ -12,7 +12,7 @@ import {
   getMucChacChanLabel,
   formatNguonText,
 } from '../data/kb';
-import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn } from '../types/vietphuc';
+import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn, OptionGuardianState } from '../types/vietphuc';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText } from '../components/SourceCitationText';
@@ -76,6 +76,9 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const [styleErrorReason, setStyleErrorReason] = useState<string | null>(null);
   const lastFetchedKeyRef = useRef<string | null>(null);
 
+  // State Cultural Guardian cho từng phương án (key = pa.token)
+  const [guardianStates, setGuardianStates] = useState<Record<string, OptionGuardianState>>({});
+
   const outfit = getTrangPhucById(selectedOutfitId) || KB_TRANG_PHUC[0];
   const boiCanh = getBoiCanhById(customization.purposeId) || BOI_CANH[0];
   const colorScheme =
@@ -103,6 +106,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     setIsLoadingStyle(true);
     setStyleError(null);
     setStyleErrorReason(null);
+    setGuardianStates({});
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 31000);
@@ -175,6 +179,97 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const handleRetryStyle = () => {
     fetchStyleOptions();
   };
+
+  // Hàm gọi POST /api/guard cho từng phương án
+  const evaluateOptionGuardian = useCallback(
+    async (pa: StylistPhuongAn) => {
+      setGuardianStates((prev) => ({
+        ...prev,
+        [pa.token]: { status: 'loading' },
+      }));
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 31000);
+
+      try {
+        const res = await fetch('/api/guard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            outfitId: outfit.id,
+            purposeId: boiCanh.id,
+            remixLevel: customization.remixLevel,
+            colorSchemeId: colorScheme.id,
+            selectedAccessoryIds: validSelectedAccessoryIds,
+            weather: customization.weather,
+            phuong_an: {
+              ten: pa.ten,
+              mo_ta: pa.mo_ta,
+              thanh_phan: pa.thanh_phan,
+              ly_do_van_hoa: pa.ly_do_van_hoa,
+              ma_nguon: pa.ma_nguon,
+              goi_y_cua_app: pa.goi_y_cua_app,
+            },
+            exp: pa.exp,
+            token: pa.token,
+          }),
+          signal: controller.signal,
+        });
+
+        window.clearTimeout(timeoutId);
+
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          setGuardianStates((prev) => ({
+            ...prev,
+            [pa.token]: { status: 'error' },
+          }));
+          return;
+        }
+
+        if (!res.ok || !data || data.success !== true || !data.guardian) {
+          setGuardianStates((prev) => ({
+            ...prev,
+            [pa.token]: { status: 'error' },
+          }));
+          return;
+        }
+
+        setGuardianStates((prev) => ({
+          ...prev,
+          [pa.token]: {
+            status: 'success',
+            result: data.guardian,
+          },
+        }));
+      } catch {
+        window.clearTimeout(timeoutId);
+        setGuardianStates((prev) => ({
+          ...prev,
+          [pa.token]: { status: 'error' },
+        }));
+      }
+    },
+    [
+      outfit.id,
+      boiCanh.id,
+      customization.remixLevel,
+      colorScheme.id,
+      validSelectedAccessoryIds,
+      customization.weather,
+    ]
+  );
+
+  // Sau khi có phương án, gọi /api/guard cho từng phương án (song song, tối đa 3)
+  useEffect(() => {
+    if (phuongAnList.length > 0) {
+      phuongAnList.slice(0, 3).forEach((pa) => {
+        evaluateOptionGuardian(pa);
+      });
+    }
+  }, [phuongAnList, evaluateOptionGuardian]);
 
   const renderPhuongAnSource = (maNguon: string | null) => {
     if (!maNguon) {
@@ -288,6 +383,11 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   });
 
   const handleSaveLook = () => {
+    const enrichedOptions = phuongAnList.map((pa) => ({
+      ...pa,
+      guardian: guardianStates[pa.token]?.result,
+    }));
+
     const newLook: SavedLook = {
       id: `look-${Date.now()}`,
       title: resultTitle,
@@ -302,7 +402,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         boiCanh.ten,
       ],
       notes: `Bối cảnh: ${boiCanh.ten} (${levelName}) · Điều kiện: ${formatWeatherSummary(customization.weather)}.`,
-      stylistOptions: phuongAnList.length > 0 ? phuongAnList : undefined,
+      stylistOptions: enrichedOptions.length > 0 ? enrichedOptions : undefined,
     };
     onSaveToLookbook(newLook);
   };
@@ -540,17 +640,23 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                             key={`${pa.token}-${idx}`}
                             className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#DED7C6] space-y-3 text-xs shadow-2xs"
                           >
-                            {/* Tên & Mô tả */}
+                            {/* Tên, Bảo chứng Cultural Guardian & Mô tả */}
                             <div>
-                              <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
                                 <h3 className="font-heritage-display text-sm sm:text-base font-bold text-[#161A1D]">
                                   {idx + 1}. {pa.ten}
                                 </h3>
-                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A] shrink-0">
-                                  Phương án 0{idx + 1}
-                                </span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <GuardianBadge
+                                    evaluation={guardianStates[pa.token] || { status: 'loading' }}
+                                    onRetry={() => evaluateOptionGuardian(pa)}
+                                  />
+                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A] shrink-0">
+                                    Phương án 0{idx + 1}
+                                  </span>
+                                </div>
                               </div>
-                              <p className="text-[#4A5560] leading-relaxed mt-1">
+                              <p className="text-[#4A5560] leading-relaxed mt-1.5">
                                 {pa.mo_ta}
                               </p>
                             </div>

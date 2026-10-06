@@ -158,7 +158,18 @@ interface PhuongAnCore {
   goi_y_cua_app: string[];
 }
 
+interface GuardianCoreResult {
+  danh_gia: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
+  muc_chac_chan: 'cao' | 'trung_binh' | 'thap';
+  diem_hai_hoa_mau: number | null;
+  ly_do: string;
+  loai_ly_do: 'lich_su' | 'thong_le' | 'tham_my' | 'chua_du_can_cu' | 'nguyen_tac_app';
+  ma_nguon: string | null;
+  goi_y_sua: string | null;
+}
+
 const styleCache = new Map<string, { phuongAn: PhuongAnCore[]; expiresAt: number }>();
+const guardianCache = new Map<string, { result: GuardianCoreResult; expiresAt: number }>();
 
 function checkIpRateLimit(ip: string): { allowed: boolean; retryAfterSec: number } {
   const now = Date.now();
@@ -347,6 +358,130 @@ function sanitizeSuggestionLine(line: string): string {
     cleaned = `Gợi ý của app: ${cleaned}`;
   }
   return cleaned;
+}
+
+const GUARDIAN_SYSTEM_INSTRUCTION = [
+  'Bạn là Cultural Guardian (Bảo Chứng Văn Hoá) của ứng dụng Việt Phục Remix, chịu trách nhiệm thẩm định tính hài hoà, chuẩn mực và bảo chứng văn hoá của từng phương án phối đồ truyền thống Việt Nam.',
+  'RÀNG BUỘC BẤT BIẾN (BẮT BUỘC TUÂN THỦ):',
+  '1. Nguồn sự thật duy nhất là phần DỮ LIỆU được cung cấp trong prompt (từ kb-v3.json và boi-canh.json). Không tự thêm, đổi hay suy diễn thông tin lịch sử, văn hoá hay quy tắc ứng xử ngoài DỮ LIỆU; nếu thông tin không có trong DỮ LIỆU thì ghi rõ "Chưa có nguồn".',
+  '2. Mức chắc chắn chỉ có 3 giá trị: cao / trung_binh / thap. KHÔNG hiển thị số phần trăm (%) về độ chắc chắn hay độ tin cậy ở bất kỳ đâu.',
+  '3. Mọi lời khuyên phối đồ ứng dụng hoặc thông lệ ứng xử không dùng các từ tuyệt đối ("tuyệt đối", "bắt buộc", "luôn").',
+  '4. Không dùng thuật ngữ "hữu nhậm" hoặc "tả nhậm"; nếu mô tả chiều vạt áo thì diễn đạt bằng hình thức (ví dụ: vạt trái phủ ngoài vạt phải).',
+  '5. Phân loại đánh giá (danh_gia):',
+  '   - hai_hoa: Bản phối tôn trọng cấu trúc cốt lõi của trang phục, màu sắc và phụ kiện phù hợp tinh thần bối cảnh.',
+  '   - can_luu_y: Bản phối có điểm cần lưu ý về bối cảnh (như nơi tôn nghiêm), điều kiện thời tiết hoặc thông lệ ứng xử, nhưng chưa làm sai lệch cấu trúc cổ áo hay vạt áo.',
+  '   - de_sai_lech: Bản phối vi phạm điều không nên khi remix từ KB (như thay đổi kết cấu nhận diện cốt lõi) hoặc vi phạm nghiêm trọng tính tôn nghiêm của bối cảnh.',
+  '6. Trường ma_nguon CHỈ được nhận đúng 1 mã nguồn có trong DỮ LIỆU (ví dụ mã KB như S01 hoặc mã bối cảnh như BC-di_chua_noi_ton_nghiem-1), hoặc null nếu không có nguồn trực tiếp.',
+  '7. diem_hai_hoa_mau: điểm hài hoà màu sắc từ 1 đến 10 (số nguyên), hoặc null nếu không đánh giá được.',
+  '8. loai_ly_do: chọn đúng 1 trong 5 loại: lich_su, thong_le, tham_my, chua_du_can_cu, nguyen_tac_app.',
+].join('\n');
+
+const GUARDIAN_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    danh_gia: {
+      type: Type.STRING,
+      enum: ['hai_hoa', 'can_luu_y', 'de_sai_lech'],
+      description: 'Đánh giá bảo chứng văn hoá: hai_hoa (Hài hoà), can_luu_y (Cần lưu ý), de_sai_lech (Dễ sai lệch văn hoá).',
+    },
+    muc_chac_chan: {
+      type: Type.STRING,
+      enum: ['cao', 'trung_binh', 'thap'],
+      description: 'Mức chắc chắn của đánh giá: cao, trung_binh, hoặc thap. Tuyệt đối không dùng số phần trăm.',
+    },
+    diem_hai_hoa_mau: {
+      type: Type.INTEGER,
+      nullable: true,
+      description: 'Điểm hài hoà màu sắc từ 1 đến 10 dựa trên bối cảnh và chất liệu, hoặc null nếu không đủ căn cứ.',
+    },
+    ly_do: {
+      type: Type.STRING,
+      description: 'Lý do đánh giá cụ thể dựa trên DỮ LIỆU. Không tự suy diễn; không có trong dữ liệu ghi "Chưa có nguồn".',
+    },
+    loai_ly_do: {
+      type: Type.STRING,
+      enum: ['lich_su', 'thong_le', 'tham_my', 'chua_du_can_cu', 'nguyen_tac_app'],
+      description: 'Phân loại loại lý do: lich_su (Lịch sử), thong_le (Thông lệ, không phải quy định), tham_my (Gợi ý thẩm mỹ), chua_du_can_cu (Chưa đủ căn cứ), nguyen_tac_app (Nguyên tắc của app).',
+    },
+    ma_nguon: {
+      type: Type.STRING,
+      nullable: true,
+      description: 'Một mã nguồn duy nhất hợp lệ có trong DỮ LIỆU (mã KB như S01 hoặc mã bối cảnh như BC-...) hoặc null.',
+    },
+    goi_y_sua: {
+      type: Type.STRING,
+      nullable: true,
+      description: 'Gợi ý điều chỉnh nếu cần để phương án chuẩn mực hoặc đẹp hơn, không dùng từ tuyệt đối.',
+    },
+  },
+  required: ['danh_gia', 'muc_chac_chan', 'ly_do', 'loai_ly_do', 'ma_nguon'],
+};
+
+function sanitizeGuardianResult(
+  raw: any,
+  allowedSourceCodes: Set<string>
+): GuardianCoreResult {
+  let danhGia: 'hai_hoa' | 'can_luu_y' | 'de_sai_lech' = 'can_luu_y';
+  if (raw?.danh_gia === 'hai_hoa' || raw?.danh_gia === 'de_sai_lech') {
+    danhGia = raw.danh_gia;
+  }
+
+  let mucChacChan: 'cao' | 'trung_binh' | 'thap' = 'trung_binh';
+  if (raw?.muc_chac_chan === 'cao' || raw?.muc_chac_chan === 'thap') {
+    mucChacChan = raw.muc_chac_chan;
+  }
+
+  const validLoai = new Set(['lich_su', 'thong_le', 'tham_my', 'chua_du_can_cu', 'nguyen_tac_app']);
+  const loaiLyDo: 'lich_su' | 'thong_le' | 'tham_my' | 'chua_du_can_cu' | 'nguyen_tac_app' =
+    validLoai.has(raw?.loai_ly_do) ? raw.loai_ly_do : 'thong_le';
+
+  let rawLyDo = typeof raw?.ly_do === 'string' && raw.ly_do.trim() ? raw.ly_do : 'Chưa có nguồn';
+  let lyDo = sanitizeTextConstraints(
+    rawLyDo
+      .replace(/\btuyệt đối\b/gi, 'nên')
+      .replace(/\bbắt buộc\b/gi, 'khuyến khích')
+      .replace(/\bluôn luôn\b/gi, 'thường')
+      .replace(/\bluôn\b/gi, 'thường')
+  );
+
+  let maNguon: string | null = null;
+  if (typeof raw?.ma_nguon === 'string' && raw.ma_nguon.trim()) {
+    const candidate = raw.ma_nguon.trim().replace(/^\[|\]$/g, '');
+    if (allowedSourceCodes.has(candidate)) {
+      maNguon = candidate;
+    }
+  }
+
+  let diemHaiHoaMau: number | null = null;
+  if (
+    typeof raw?.diem_hai_hoa_mau === 'number' &&
+    Number.isInteger(raw.diem_hai_hoa_mau) &&
+    raw.diem_hai_hoa_mau >= 1 &&
+    raw.diem_hai_hoa_mau <= 10
+  ) {
+    diemHaiHoaMau = raw.diem_hai_hoa_mau;
+  }
+
+  let goiYSua: string | null = null;
+  if (typeof raw?.goi_y_sua === 'string' && raw.goi_y_sua.trim()) {
+    goiYSua = sanitizeTextConstraints(
+      raw.goi_y_sua
+        .replace(/\btuyệt đối\b/gi, 'nên')
+        .replace(/\bbắt buộc\b/gi, 'khuyến khích')
+        .replace(/\bluôn luôn\b/gi, 'thường')
+        .replace(/\bluôn\b/gi, 'thường')
+    );
+  }
+
+  return {
+    danh_gia: danhGia,
+    muc_chac_chan: mucChacChan,
+    diem_hai_hoa_mau: diemHaiHoaMau,
+    ly_do: lyDo,
+    loai_ly_do: loaiLyDo,
+    ma_nguon: maNguon,
+    goi_y_sua: goiYSua,
+  };
 }
 
 async function startServer() {
@@ -938,6 +1073,457 @@ async function startServer() {
         success: false,
         error: 'chua_kiem_tra_duoc',
         reason,
+        message: 'Chưa kiểm tra được',
+      });
+    }
+  });
+
+  // B6: Cultural Guardian endpoint for evaluating each styling option
+  app.post('/api/guard', async (req, res) => {
+    const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+    const rateStatus = checkIpRateLimit(clientIp);
+    if (!rateStatus.allowed) {
+      res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
+      return res.status(429).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (vượt quá giới hạn 20 yêu cầu/phút, vui lòng thử lại sau).',
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (dữ liệu đầu vào không hợp lệ).',
+      });
+    }
+
+    const {
+      outfitId,
+      purposeId,
+      remixLevel,
+      colorSchemeId,
+      selectedAccessoryIds,
+      weather,
+      phuong_an: rawPhuongAn,
+      phuongAn: altPhuongAn,
+      exp,
+      token,
+    } = req.body;
+
+    const targetPhuongAn = rawPhuongAn || altPhuongAn;
+
+    // Validate exp
+    if (typeof exp !== 'number' || !Number.isFinite(exp)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (thiếu hoặc sai định dạng exp).',
+      });
+    }
+
+    if (Date.now() > exp) {
+      return res.status(410).json({
+        success: false,
+        error: 'phien_da_het',
+        message: 'Phiên đã hết, hãy tạo lại gợi ý',
+      });
+    }
+
+    if (!isValidShortString(token)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (thiếu chữ ký token).',
+      });
+    }
+
+    // 1. Validate outfitId against KB-v3
+    if (!isValidShortString(outfitId) || !kbOutfitsMap.has(outfitId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (outfitId không tồn tại trong KB-v3).',
+      });
+    }
+    const kbOutfit = kbOutfitsMap.get(outfitId);
+
+    // 2. Validate purposeId against boi-canh.json
+    if (!isValidShortString(purposeId) || !boiCanhMap.has(purposeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (purposeId không tồn tại trong boi-canh.json).',
+      });
+    }
+    const kbBoiCanh = boiCanhMap.get(purposeId);
+
+    // 3. Validate remixLevel (1 | 2 | 3)
+    if (
+      typeof remixLevel !== 'number' ||
+      !Number.isInteger(remixLevel) ||
+      !ALLOWED_REMIX_LEVELS.has(remixLevel)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (remixLevel chỉ nhận số nguyên 1, 2 hoặc 3).',
+      });
+    }
+
+    // 4. Validate colorSchemeId
+    if (!isValidShortString(colorSchemeId) || !ALLOWED_COLOR_SCHEMES.has(colorSchemeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (colorSchemeId không nằm trong danh mục cho phép).',
+      });
+    }
+
+    // 5. Validate selectedAccessoryIds
+    if (!Array.isArray(selectedAccessoryIds) || selectedAccessoryIds.length > MAX_ACCESSORY_COUNT) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (selectedAccessoryIds phải là mảng hợp lệ).',
+      });
+    }
+    const outfitAccMap = kbAccessoriesMap.get(outfitId) || new Map();
+    const validatedAccessoryIds: string[] = [];
+    const selectedAccessoryDescriptions: string[] = [];
+
+    for (const accId of selectedAccessoryIds) {
+      if (!isValidShortString(accId) || !outfitAccMap.has(accId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          message: 'Chưa kiểm tra được (mã phụ kiện không thuộc trang phục đã chọn).',
+        });
+      }
+      if (!validatedAccessoryIds.includes(accId)) {
+        validatedAccessoryIds.push(accId);
+        const accInfo = outfitAccMap.get(accId)!;
+        selectedAccessoryDescriptions.push(
+          accInfo.isAppSuggestion
+            ? `${accInfo.name} [Gợi ý của app, không phải sự thật lịch sử]`
+            : `${accInfo.name} [Tư liệu KB-v3]`
+        );
+      }
+    }
+
+    // 6. Validate weather
+    if (
+      !weather ||
+      typeof weather !== 'object' ||
+      Array.isArray(weather) ||
+      !isValidShortString(weather.season) ||
+      !ALLOWED_SEASONS.has(weather.season) ||
+      !isValidShortString(weather.temperature) ||
+      !ALLOWED_TEMPERATURES.has(weather.temperature) ||
+      !isValidShortString(weather.timeOfDay) ||
+      !ALLOWED_TIMES_OF_DAY.has(weather.timeOfDay)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (weather không đúng cấu trúc hoặc giá trị cho phép).',
+      });
+    }
+
+    // 7. Validate targetPhuongAn
+    if (!targetPhuongAn || typeof targetPhuongAn !== 'object' || Array.isArray(targetPhuongAn)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (phương án không hợp lệ).',
+      });
+    }
+
+    const paCore: PhuongAnCore = {
+      ten: typeof targetPhuongAn.ten === 'string' ? targetPhuongAn.ten : '',
+      mo_ta: typeof targetPhuongAn.mo_ta === 'string' ? targetPhuongAn.mo_ta : '',
+      thanh_phan: Array.isArray(targetPhuongAn.thanh_phan)
+        ? targetPhuongAn.thanh_phan.filter((x: unknown) => typeof x === 'string')
+        : [],
+      ly_do_van_hoa: typeof targetPhuongAn.ly_do_van_hoa === 'string' ? targetPhuongAn.ly_do_van_hoa : '',
+      ma_nguon: typeof targetPhuongAn.ma_nguon === 'string' ? targetPhuongAn.ma_nguon : null,
+      goi_y_cua_app: Array.isArray(targetPhuongAn.goi_y_cua_app)
+        ? targetPhuongAn.goi_y_cua_app.filter((x: unknown) => typeof x === 'string')
+        : [],
+    };
+
+    const validatedInput = {
+      outfitId,
+      purposeId,
+      remixLevel,
+      colorSchemeId,
+      selectedAccessoryIds: [...validatedAccessoryIds].sort(),
+      weather: {
+        season: weather.season,
+        temperature: weather.temperature,
+        timeOfDay: weather.timeOfDay,
+      },
+    };
+
+    const { apiKey, hasValidKey, ai } = getGeminiContext();
+
+    if (!hasValidKey || !ai) {
+      return res.status(503).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        reason: 'missing_key',
+        message: 'Chưa kiểm tra được',
+      });
+    }
+
+    // Verify HMAC Token
+    const expectedToken = signPhuongAnToken(apiKey, validatedInput, paCore, exp);
+    if (token !== expectedToken) {
+      return res.status(403).json({
+        success: false,
+        error: 'token_khong_hop_le',
+        message: 'Chưa kiểm tra được (chữ ký phương án không hợp lệ).',
+      });
+    }
+
+    // Check in-process cache by token
+    const now = Date.now();
+    const cachedEntry = guardianCache.get(token);
+    if (cachedEntry && now < cachedEntry.expiresAt) {
+      return res.json({
+        success: true,
+        guardian: cachedEntry.result,
+      });
+    }
+
+    // Check Daily Cap
+    if (!checkDailyCap()) {
+      return res.status(429).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Hệ thống đã đạt giới hạn hôm nay',
+      });
+    }
+
+    // Build allowed source codes
+    const allowedSourceCodes = new Set<string>();
+    const kbSourceLines: string[] = [];
+    if (Array.isArray(kbOutfit.nguon)) {
+      for (const code of kbOutfit.nguon) {
+        if (typeof code === 'string' && code.trim()) {
+          const cleanCode = code.trim();
+          allowedSourceCodes.add(cleanCode);
+          const srcInfo = kbSourcesMap.get(cleanCode);
+          kbSourceLines.push(
+            srcInfo
+              ? `- Mã [${cleanCode}]: ${srcInfo.ten} (Loại: ${srcInfo.loai})`
+              : `- Mã [${cleanCode}]: Chưa có nguồn`
+          );
+        }
+      }
+    }
+    for (const code of kbSourcesMap.keys()) {
+      allowedSourceCodes.add(code);
+    }
+
+    const bcSourceLines: string[] = [];
+    const bcNguonArray: string[] = Array.isArray(kbBoiCanh.nguon) ? kbBoiCanh.nguon : [];
+    bcNguonArray.forEach((url: string, idx: number) => {
+      const bcCode = `BC-${kbBoiCanh.id}-${idx + 1}`;
+      allowedSourceCodes.add(bcCode);
+      bcSourceLines.push(`- Mã [${bcCode}]: ${url}`);
+    });
+
+    const kbGoiYLines = Array.isArray(kbOutfit.goi_y_phoi_do)
+      ? kbOutfit.goi_y_phoi_do.map(
+          (gy: any) =>
+            `- [Gợi ý của app, không phải sự thật lịch sử] (${gy.loai || 'goi_y'}): ${gy.noi_dung}${
+              gy.ghi_chu ? ` — Ghi chú: ${gy.ghi_chu}` : ''
+            }`
+        )
+      : [];
+
+    const kbKhongNenLines = Array.isArray(kbOutfit.khong_nen_khi_remix)
+      ? kbOutfit.khong_nen_khi_remix.map((w: any) =>
+          typeof w === 'string' ? `- ${w}` : `- ${w?.noi_dung || ''} (Căn cứ: ${w?.can_cu || 'Chưa có nguồn'})`
+        )
+      : [];
+
+    const bcNenUuTienLines = Array.isArray(kbBoiCanh.nen_uu_tien)
+      ? kbBoiCanh.nen_uu_tien.map(
+          (item: any) =>
+            `- Trang phục ${item.trang_phuc_id}: ${item.ly_do} [Gợi ý của app, chưa có nguồn]`
+        )
+      : [];
+
+    const bcLuuYLines = Array.isArray(kbBoiCanh.luu_y)
+      ? kbBoiCanh.luu_y.map((ly: any) => {
+          const loaiText =
+            ly.loai === 'thong_le_ung_xu' ? 'Thông lệ ứng xử (không phải quy định)' : 'Gợi ý thẩm mỹ';
+          const mappedCodes = Array.isArray(ly.nguon_chi_so)
+            ? ly.nguon_chi_so
+                .filter((i: unknown) => typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < bcNguonArray.length)
+                .map((i: number) => `BC-${kbBoiCanh.id}-${i + 1}`)
+            : [];
+          const codeLabel = mappedCodes.length > 0 ? mappedCodes.join(', ') : 'Chưa có nguồn';
+          return `- [${loaiText}] ${ly.noi_dung} (Mã nguồn bối cảnh: ${codeLabel})`;
+        })
+      : [];
+
+    const guardianPrompt = [
+      '=== DỮ LIỆU TRANG PHỤC TỪ KB-v3 ===',
+      `- Mã trang phục: ${kbOutfit.id}`,
+      `- Tên trang phục: ${kbOutfit.ten}`,
+      `- Thời kỳ: ${kbOutfit.thoi_ky || 'Chưa có nguồn'}`,
+      `- Mức chắc chắn tư liệu: ${kbOutfit.muc_chac_chan}`,
+      '- Bộ phận cấu tạo:',
+      `  + Cổ áo: ${kbOutfit.bo_phan?.co || 'Chưa có nguồn'}`,
+      `  + Tay áo: ${kbOutfit.bo_phan?.tay || 'Chưa có nguồn'}`,
+      `  + Thân áo: ${kbOutfit.bo_phan?.than || 'Chưa có nguồn'}`,
+      `  + Vật liệu: ${kbOutfit.bo_phan?.vat_lieu || 'Chưa có nguồn'}`,
+      '- Đặc điểm nhận diện hình ảnh:',
+      ...(Array.isArray(kbOutfit.dac_diem_nhan_dien_hinh_anh) && kbOutfit.dac_diem_nhan_dien_hinh_anh.length > 0
+        ? kbOutfit.dac_diem_nhan_dien_hinh_anh.map((d: string) => `  + ${d}`)
+        : ['  + Chưa có nguồn']),
+      '- Phụ kiện trong tư liệu KB:',
+      ...(Array.isArray(kbOutfit.phu_kien) && kbOutfit.phu_kien.length > 0
+        ? kbOutfit.phu_kien.map((p: string) => `  + ${p}`)
+        : ['  + Chưa có nguồn']),
+      '- Lưu ý không nên khi remix từ KB:',
+      ...(kbKhongNenLines.length > 0 ? kbKhongNenLines : ['- Chưa có nguồn']),
+      '- Gợi ý phối đồ từ KB (Gợi ý của app, không phải sự thật lịch sử):',
+      ...(kbGoiYLines.length > 0 ? kbGoiYLines : ['- Chưa có nguồn']),
+      '- Nguồn tư liệu trang phục từ KB:',
+      ...(kbSourceLines.length > 0 ? kbSourceLines : ['- Chưa có nguồn']),
+      '',
+      '=== DỮ LIỆU BỐI CẢNH TỪ boi-canh.json ===',
+      `- Mã bối cảnh: ${kbBoiCanh.id}`,
+      `- Tên bối cảnh: ${kbBoiCanh.ten}`,
+      `- Tinh thần: ${kbBoiCanh.tinh_than}`,
+      `- Mức cách tân gợi ý của bối cảnh: ${kbBoiCanh.muc_remix} (${kbBoiCanh.muc_remix_ghi_chu || 'Chưa có nguồn'})`,
+      '- Khuyến nghị trang phục ưu tiên (Gợi ý của app, chưa có nguồn):',
+      ...(bcNenUuTienLines.length > 0 ? bcNenUuTienLines : ['- Chưa có nguồn']),
+      '- Lưu ý của bối cảnh:',
+      ...(bcLuuYLines.length > 0 ? bcLuuYLines : ['- Chưa có nguồn']),
+      '- Nguồn tham khảo của bối cảnh:',
+      ...(bcSourceLines.length > 0 ? bcSourceLines : ['- Chưa có nguồn']),
+      '',
+      '=== LỰA CHỌN ĐẦU VÀO ĐÃ KIỂM TRA CỦA NGƯỜI DÙNG ===',
+      `- Trang phục: ${kbOutfit.ten} (${kbOutfit.id})`,
+      `- Bối cảnh: ${kbBoiCanh.ten} (${kbBoiCanh.id})`,
+      `- Mức độ cách tân: ${ALLOWED_REMIX_LEVELS.get(remixLevel)}`,
+      `- Bảng màu: ${ALLOWED_COLOR_SCHEMES.get(colorSchemeId)}`,
+      `- Phụ kiện: ${
+        selectedAccessoryDescriptions.length > 0
+          ? selectedAccessoryDescriptions.join('; ')
+          : 'Không chọn phụ kiện'
+      }`,
+      `- Điều kiện thời tiết & thời điểm: ${ALLOWED_SEASONS.get(weather.season)} · ${ALLOWED_TEMPERATURES.get(
+        weather.temperature
+      )} · ${ALLOWED_TIMES_OF_DAY.get(weather.timeOfDay)}`,
+      '',
+      '=== PHƯƠNG ÁN PHỐI ĐỒ CẦN BẢO CHỨNG VĂN HOÁ ===',
+      `- Tên phương án: ${paCore.ten}`,
+      `- Thành phần bản phối: ${paCore.thanh_phan.join(', ')}`,
+      `- Gợi ý của app đi kèm: ${paCore.goi_y_cua_app.join('; ')}`,
+      `- Mô tả tổng thể: ${paCore.mo_ta}`,
+      `- Căn cứ văn hoá ban đầu: ${paCore.ly_do_van_hoa}`,
+      `- Mã nguồn ban đầu: ${paCore.ma_nguon || 'Chưa có nguồn'}`,
+      '',
+      'Hãy đối chiếu phương án phối đồ trên với toàn bộ DỮ LIỆU và đưa ra đánh giá bảo chứng văn hoá (Cultural Guardian) đúng theo schema JSON.',
+    ].join('\n');
+
+    incrementDailyCap();
+
+    const modelName = resolveGeminiModel();
+
+    try {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('GEMINI_TIMEOUT'));
+        }, GEMINI_TIMEOUT_MS);
+      });
+
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: modelName,
+          contents: guardianPrompt,
+          config: {
+            systemInstruction: GUARDIAN_SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseSchema: GUARDIAN_RESPONSE_SCHEMA,
+            temperature: 0.2,
+            maxOutputTokens: 4096,
+          },
+        }),
+        timeoutPromise,
+      ]);
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      const rawText = typeof response?.text === 'string' ? response.text.trim() : '';
+      if (!rawText) {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          reason: 'empty_response',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      let cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      const startIdx = cleaned.indexOf('{');
+      const endIdx = cleaned.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        cleaned = cleaned.slice(startIdx, endIdx + 1);
+      }
+
+      let parsedJson: any;
+      try {
+        parsedJson = JSON.parse(cleaned);
+      } catch {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          reason: 'bad_json_format',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      const sanitized = sanitizeGuardianResult(parsedJson, allowedSourceCodes);
+
+      if (guardianCache.size > 300) {
+        const curTs = Date.now();
+        for (const [k, v] of guardianCache.entries()) {
+          if (curTs >= v.expiresAt) guardianCache.delete(k);
+        }
+      }
+      guardianCache.set(token, {
+        result: sanitized,
+        expiresAt: Date.now() + STYLE_CACHE_TTL_MS,
+      });
+
+      return res.json({
+        success: true,
+        guardian: sanitized,
+      });
+    } catch (err: any) {
+      const statusNum =
+        typeof err?.status === 'number'
+          ? err.status
+          : typeof err?.code === 'number'
+          ? err.code
+          : undefined;
+      const errMsgRaw = typeof err?.message === 'string' ? err.message : String(err ?? '');
+      const safeMsg = errMsgRaw.replace(/[\r\n]+/g, ' ').slice(0, 200);
+
+      console.log(`[Guardian Diag] model=${modelName} status=${statusNum ?? 'none'} message=${safeMsg}`);
+
+      return res.status(503).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
         message: 'Chưa kiểm tra được',
       });
     }

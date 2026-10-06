@@ -35,6 +35,34 @@ export interface StylistPhuongAn {
   goi_y_cua_app: string[];
   exp: number;
   token: string;
+  guardian?: GuardianResult;
+}
+
+export type GuardianDanhGia = 'hai_hoa' | 'can_luu_y' | 'de_sai_lech';
+
+export type GuardianLoaiLyDo =
+  | 'lich_su'
+  | 'thong_le'
+  | 'tham_my'
+  | 'chua_du_can_cu'
+  | 'nguyen_tac_app';
+
+export interface GuardianResult {
+  danh_gia: GuardianDanhGia;
+  muc_chac_chan: KBMucChacChan;
+  diem_hai_hoa_mau: number | null;
+  ly_do: string;
+  loai_ly_do: GuardianLoaiLyDo;
+  ma_nguon: string | null;
+  goi_y_sua: string | null;
+}
+
+export type GuardianStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export interface OptionGuardianState {
+  status: GuardianStatus;
+  result?: GuardianResult;
+  errorMessage?: string;
 }
 
 export interface SavedLook {
