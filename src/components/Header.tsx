@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface HeaderProps {
   currentTab: string;
@@ -13,6 +13,31 @@ export const Header: React.FC<HeaderProps> = ({
   lookbookCount,
   compareCount,
 }) => {
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/health')
+      .then((res) => {
+        if (!res.ok) throw new Error('Health check failed');
+        return res.json();
+      })
+      .then((data) => {
+        if (isMounted) {
+          setHasServerKey(Boolean(data && data.hasServerKey === true));
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setHasServerKey(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 bg-[#F8F6F0]/95 backdrop-blur-md border-b border-[#DED7C6]/60 transition-colors">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
@@ -83,8 +108,22 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: Primary action */}
-        <div className="flex items-center gap-2">
+        {/* Zone 3: API Health Indicator & Primary action */}
+        <div className="flex items-center gap-2.5">
+          {hasServerKey !== null && (
+            <div
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/80 border border-[#DED7C6] text-[11px] font-medium text-[#4A5560] whitespace-nowrap"
+              title="Trạng thái cấu hình GEMINI_API_KEY từ /api/health"
+            >
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  hasServerKey ? 'bg-emerald-500' : 'bg-red-500'
+                }`}
+              />
+              <span>{hasServerKey ? 'API Key OK' : 'Thiếu API Key'}</span>
+            </div>
+          )}
+
           <button
             onClick={() => onNavigate('select')}
             className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#1E3F5A] hover:bg-[#12283A] rounded-lg transition-colors cursor-pointer min-h-[36px] shadow-sm whitespace-nowrap"

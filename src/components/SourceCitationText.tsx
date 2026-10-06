@@ -46,17 +46,31 @@ export const SourceCitationText: React.FC<SourceCitationTextProps> = ({
       <span key={`group-${match.index}`} className="inline-flex items-center gap-1 mx-1 align-baseline">
         {codes.map((code) => {
           const sourceInfo = sourceMap[code];
+          const chipTitle = sourceInfo
+            ? `${sourceInfo.ten} (${getLoaiNguonLabel(sourceInfo.loai)})`
+            : `Nguồn: ${code}`;
+
+          if (!onSelectSource) {
+            return (
+              <span
+                key={`chip-${code}-${match!.index}`}
+                title={chipTitle}
+                className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono font-semibold rounded bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25"
+              >
+                [{code}]
+              </span>
+            );
+          }
+
           return (
             <button
               type="button"
               key={`chip-${code}-${match!.index}`}
               onClick={(e) => {
                 e.stopPropagation();
-                if (onSelectSource) {
-                  onSelectSource(code);
-                }
+                onSelectSource(code);
               }}
-              title={sourceInfo ? `${sourceInfo.ten} (${getLoaiNguonLabel(sourceInfo.loai)})` : `Nguồn: ${code}`}
+              title={chipTitle}
               className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono font-semibold rounded bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25 hover:bg-[#1E3F5A] hover:text-white transition-colors cursor-pointer"
             >
               [{code}]

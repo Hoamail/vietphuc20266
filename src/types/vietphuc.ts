@@ -26,6 +26,17 @@ export interface RemixCustomization {
   weather: WeatherCondition;
 }
 
+export interface StylistPhuongAn {
+  ten: string;
+  mo_ta: string;
+  thanh_phan: string[];
+  ly_do_van_hoa: string;
+  ma_nguon: string | null;
+  goi_y_cua_app: string[];
+  exp: number;
+  token: string;
+}
+
 export interface SavedLook {
   id: string;
   title: string;
@@ -35,4 +46,5 @@ export interface SavedLook {
   savedAt: string;
   notes?: string;
   tags: string[];
+  stylistOptions?: StylistPhuongAn[];
 }

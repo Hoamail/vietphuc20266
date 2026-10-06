@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Scale, Share2, Check, ExternalLink, Info } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Scale, Share2, Check, ExternalLink, Info, RefreshCw, Sparkles, AlertCircle } from 'lucide-react';
 import {
   getTrangPhucById,
   KB_TRANG_PHUC,
@@ -9,9 +9,10 @@ import {
   getAccessoriesForGarment,
   KB_NGUON,
   getLoaiNguonLabel,
+  getMucChacChanLabel,
   formatNguonText,
 } from '../data/kb';
-import { RemixCustomization, SavedLook, WeatherCondition } from '../types/vietphuc';
+import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn } from '../types/vietphuc';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText } from '../components/SourceCitationText';
@@ -68,15 +69,183 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'styling' | 'anatomy' | 'history'>('styling');
 
+  // State cho phương án Stylist từ /api/style (giữ kèm exp và token)
+  const [phuongAnList, setPhuongAnList] = useState<StylistPhuongAn[]>([]);
+  const [isLoadingStyle, setIsLoadingStyle] = useState<boolean>(true);
+  const [styleError, setStyleError] = useState<string | null>(null);
+  const lastFetchedKeyRef = useRef<string | null>(null);
+
   const outfit = getTrangPhucById(selectedOutfitId) || KB_TRANG_PHUC[0];
   const boiCanh = getBoiCanhById(customization.purposeId) || BOI_CANH[0];
   const colorScheme =
     POTTERY_SILK_PALETTES.find((c) => c.id === customization.colorSchemeId) || POTTERY_SILK_PALETTES[0];
 
   const accessoryOptions = getAccessoriesForGarment(outfit);
-  const selectedAccessories = accessoryOptions.filter((a) =>
-    customization.selectedAccessoryIds.includes(a.id)
+  const validSelectedAccessoryIds = customization.selectedAccessoryIds.filter((id) =>
+    accessoryOptions.some((opt) => opt.id === id)
   );
+  const selectedAccessories = accessoryOptions.filter((a) =>
+    validSelectedAccessoryIds.includes(a.id)
+  );
+
+  const requestPayload = {
+    outfitId: outfit.id,
+    purposeId: boiCanh.id,
+    remixLevel: customization.remixLevel,
+    colorSchemeId: colorScheme.id,
+    selectedAccessoryIds: validSelectedAccessoryIds,
+    weather: customization.weather,
+  };
+  const requestKey = JSON.stringify(requestPayload);
+
+  const fetchStyleOptions = useCallback(async () => {
+    setIsLoadingStyle(true);
+    setStyleError(null);
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 31000);
+
+    try {
+      const res = await fetch('/api/style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestKey,
+        signal: controller.signal,
+      });
+
+      window.clearTimeout(timeoutId);
+
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        setPhuongAnList([]);
+        setStyleError('Chưa kiểm tra được');
+        setIsLoadingStyle(false);
+        return;
+      }
+
+      if (
+        !res.ok ||
+        !data ||
+        data.success !== true ||
+        !Array.isArray(data.phuong_an) ||
+        data.phuong_an.length === 0
+      ) {
+        setPhuongAnList([]);
+        if (res.status === 429 && data?.message === 'Hệ thống đã đạt giới hạn hôm nay') {
+          setStyleError('Chưa kiểm tra được (Hệ thống đã đạt giới hạn hôm nay)');
+        } else {
+          setStyleError('Chưa kiểm tra được');
+        }
+        setIsLoadingStyle(false);
+        return;
+      }
+
+      setPhuongAnList(data.phuong_an as StylistPhuongAn[]);
+      setStyleError(null);
+      setIsLoadingStyle(false);
+    } catch {
+      window.clearTimeout(timeoutId);
+      setPhuongAnList([]);
+      setStyleError('Chưa kiểm tra được');
+      setIsLoadingStyle(false);
+    }
+  }, [requestKey]);
+
+  // Gọi /api/style đúng một lần khi vào màn
+  useEffect(() => {
+    if (lastFetchedKeyRef.current === requestKey) {
+      return;
+    }
+    lastFetchedKeyRef.current = requestKey;
+    fetchStyleOptions();
+  }, [requestKey, fetchStyleOptions]);
+
+  const handleRetryStyle = () => {
+    fetchStyleOptions();
+  };
+
+  const renderPhuongAnSource = (maNguon: string | null) => {
+    if (!maNguon) {
+      return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+    }
+
+    // 1. Nguồn từ KB-v3
+    const kbSrc = KB_NGUON[maNguon];
+    if (kbSrc) {
+      return (
+        <div className="inline-flex flex-wrap items-center gap-1.5">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+            [{maNguon}]
+          </span>
+          {kbSrc.url ? (
+            <a
+              href={kbSrc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1E3F5A] font-medium hover:underline inline-flex items-center gap-1"
+            >
+              <span>{kbSrc.ten}</span>
+              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+            </a>
+          ) : (
+            <span className="text-[#161A1D] font-medium">{kbSrc.ten}</span>
+          )}
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#52606D] font-semibold">
+            {getLoaiNguonLabel(kbSrc.loai)}
+          </span>
+        </div>
+      );
+    }
+
+    // 2. Nguồn bối cảnh BC-<id_boi_canh>-<n>
+    const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(maNguon);
+    if (bcMatch) {
+      const bcId = bcMatch[1];
+      const oneBasedIdx = parseInt(bcMatch[2], 10);
+      const targetBc = getBoiCanhById(bcId) || boiCanh;
+      const url =
+        targetBc && Array.isArray(targetBc.nguon) && oneBasedIdx >= 1 && oneBasedIdx <= targetBc.nguon.length
+          ? targetBc.nguon[oneBasedIdx - 1]
+          : undefined;
+
+      let domain = maNguon;
+      if (url) {
+        try {
+          domain = new URL(url).hostname.replace(/^www\./i, '');
+        } catch {
+          domain = url;
+        }
+      }
+
+      return (
+        <div className="inline-flex flex-wrap items-center gap-1.5">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+            [{maNguon}]
+          </span>
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1E3F5A] font-medium hover:underline inline-flex items-center gap-1"
+            >
+              <span>{domain}</span>
+              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+            </a>
+          ) : (
+            <span className="text-[#161A1D] font-medium">{domain}</span>
+          )}
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FDF9F0] border border-[#C88E1B]/30 text-[#8B5A2B] font-semibold">
+            thông lệ/gợi ý
+          </span>
+        </div>
+      );
+    }
+
+    return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+  };
 
   const getRemixLevelTitle = (level: 1 | 2 | 3) => {
     switch (level) {
@@ -123,6 +292,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         boiCanh.ten,
       ],
       notes: `Bối cảnh: ${boiCanh.ten} (${levelName}) · Điều kiện: ${formatWeatherSummary(customization.weather)}.`,
+      stylistOptions: phuongAnList.length > 0 ? phuongAnList : undefined,
     };
     onSaveToLookbook(newLook);
   };
@@ -228,10 +398,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                 </p>
               </div>
 
-              {/* Cultural Guardian Badge: Tạm hiện "Chưa kiểm tra" theo yêu cầu */}
+              {/* Cultural Guardian Badge */}
               <div className="mt-4">
                 <GuardianBadge
-                  label="Chưa kiểm tra"
+                  label={
+                    isLoadingStyle
+                      ? 'Chưa kiểm tra'
+                      : styleError
+                      ? 'Chưa kiểm tra được'
+                      : `Mức chắc chắn: ${getMucChacChanLabel(outfit.muc_chac_chan)}`
+                  }
                   certaintyLevel={outfit.muc_chac_chan}
                   sources={sourceDetails}
                   warnings={outfit.khong_nen_khi_remix}
@@ -251,7 +427,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                         : 'text-[#7A8691] hover:text-[#161A1D]'
                     }`}
                   >
-                    Bối cảnh & Gợi ý phối đồ
+                    Phương án Stylist & Bối cảnh
                   </button>
                   <button
                     type="button"
@@ -278,11 +454,152 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                 </div>
               </div>
 
-              {/* Tab 1: Bối cảnh & Gợi ý phối đồ */}
+              {/* Tab 1: Phương án Stylist & Bối cảnh */}
               {activeTab === 'styling' && (
-                <div className="mt-4 space-y-3">
-                  {/* Đánh giá bối cảnh từ boi-canh.json */}
-                  <div className="space-y-2.5">
+                <div className="mt-4 space-y-4">
+                  {/* Khối Phương án phối đồ từ /api/style */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-[#C88E1B]" />
+                        <span>Phương án phối đồ đề xuất</span>
+                      </h2>
+                      {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
+                        <span className="text-[11px] font-mono text-[#6C7A87]">
+                          {phuongAnList.length} phương án
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Skeleton khi chờ */}
+                    {isLoadingStyle && (
+                      <div className="space-y-3" aria-busy="true" aria-label="Đang tải phương án phối đồ">
+                        {[1, 2].map((skeletonIdx) => (
+                          <div
+                            key={skeletonIdx}
+                            className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#DED7C6] animate-pulse space-y-2.5"
+                          >
+                            <div className="h-4 w-2/5 bg-[#E6E0D2] rounded" />
+                            <div className="h-3 w-full bg-[#EFECE3] rounded" />
+                            <div className="h-3 w-4/5 bg-[#EFECE3] rounded" />
+                            <div className="flex gap-2 pt-1">
+                              <div className="h-5 w-20 bg-[#E6E0D2] rounded" />
+                              <div className="h-5 w-24 bg-[#E6E0D2] rounded" />
+                            </div>
+                            <div className="h-10 w-full bg-[#EFECE3] rounded-xl mt-2" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Khi lỗi: hiện "Chưa kiểm tra được" kèm nút "Thử lại", không hiện nội dung dựng sẵn */}
+                    {!isLoadingStyle && styleError && (
+                      <div className="p-4 rounded-2xl bg-[#FBEFEF] border border-[#B93826]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="w-4 h-4 text-[#B93826] shrink-0 mt-0.5" />
+                          <div>
+                            <div className="text-xs font-bold text-[#8E2516]">
+                              {styleError}
+                            </div>
+                            <p className="text-[11px] text-[#78261A] mt-0.5">
+                              Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn lấy trực tiếp từ KB-v3.
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRetryStyle}
+                          className="px-3.5 py-1.5 bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Thử lại</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Khi thành công: hiện 2-3 thẻ phương án */}
+                    {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
+                      <div className="space-y-3.5">
+                        {phuongAnList.map((pa, idx) => (
+                          <div
+                            key={`${pa.token}-${idx}`}
+                            className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#DED7C6] space-y-3 text-xs shadow-2xs"
+                          >
+                            {/* Tên & Mô tả */}
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <h3 className="font-heritage-display text-sm sm:text-base font-bold text-[#161A1D]">
+                                  {idx + 1}. {pa.ten}
+                                </h3>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A] shrink-0">
+                                  Phương án 0{idx + 1}
+                                </span>
+                              </div>
+                              <p className="text-[#4A5560] leading-relaxed mt-1">
+                                {pa.mo_ta}
+                              </p>
+                            </div>
+
+                            {/* Thành phần (thanh_phan) */}
+                            <div>
+                              <div className="text-[11px] font-bold text-[#1E3F5A] mb-1">
+                                Thành phần bản phối:
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {pa.thanh_phan.map((tp, tpIdx) => (
+                                  <span
+                                    key={tpIdx}
+                                    className="px-2.5 py-1 rounded-lg bg-white border border-[#DED7C6] text-[#161A1D] font-medium"
+                                  >
+                                    {tp}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Lý do văn hoá (ly_do_van_hoa) & Nguồn (ma_nguon) */}
+                            <div className="p-3 rounded-xl bg-white border border-[#E8E2D8] space-y-1.5">
+                              <div className="text-[11px] font-bold text-[#1E3F5A]">
+                                Lý do văn hoá & Bối cảnh:
+                              </div>
+                              <p className="text-[#4A5560] leading-relaxed">
+                                {pa.ly_do_van_hoa}
+                              </p>
+                              <div className="pt-1.5 border-t border-[#F0EBE0] flex flex-wrap items-center gap-1.5 text-[11px]">
+                                <span className="font-semibold text-[#52606D]">Nguồn:</span>
+                                {renderPhuongAnSource(pa.ma_nguon)}
+                              </div>
+                            </div>
+
+                            {/* Khối "Gợi ý của app" (goi_y_cua_app) */}
+                            <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/30 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold text-[#8B5A2B]">
+                                  Gợi ý của app
+                                </span>
+                                <span className="text-[10px] font-semibold text-[#8B5A2B] bg-white px-2 py-0.5 rounded border border-[#C88E1B]/30">
+                                  Gợi ý của app, không phải sự thật lịch sử
+                                </span>
+                              </div>
+                              <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
+                                {pa.goi_y_cua_app.map((line, lIdx) => (
+                                  <li key={lIdx} className="leading-relaxed">
+                                    {line}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Đánh giá bối cảnh tĩnh từ boi-canh.json */}
+                  <div className="pt-3 border-t border-[#DED7C6] space-y-2.5">
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
+                      Thông tin bối cảnh từ dữ liệu (boi-canh.json)
+                    </div>
                     {priorityRecommendation ? (
                       <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#DED7C6] text-xs space-y-1">
                         <div className="flex items-center justify-between gap-2 flex-wrap">

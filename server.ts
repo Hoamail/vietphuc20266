@@ -1,9 +1,10 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -14,18 +15,35 @@ const __dirname = path.dirname(__filename);
 const kbPath = path.resolve(__dirname, 'src/data/kb-v3.json');
 const kbRaw = JSON.parse(fs.readFileSync(kbPath, 'utf-8'));
 const kbOutfitsMap = new Map<string, any>();
-const kbAccessoriesMap = new Map<string, Map<string, string>>();
+const kbSourcesMap = new Map<string, { ten: string; url: string; loai: string }>();
+const kbAccessoriesMap = new Map<string, Map<string, { name: string; isAppSuggestion: boolean }>>();
+
+if (kbRaw && typeof kbRaw.nguon === 'object' && kbRaw.nguon !== null) {
+  for (const [code, src] of Object.entries(kbRaw.nguon)) {
+    if (src && typeof src === 'object') {
+      const s = src as any;
+      kbSourcesMap.set(code, {
+        ten: typeof s.ten === 'string' ? s.ten : code,
+        url: typeof s.url === 'string' ? s.url : '',
+        loai: typeof s.loai === 'string' ? s.loai : 'chua_xac_dinh',
+      });
+    }
+  }
+}
 
 if (Array.isArray(kbRaw.trang_phuc)) {
   for (const item of kbRaw.trang_phuc) {
     if (item && typeof item.id === 'string') {
       kbOutfitsMap.set(item.id, item);
 
-      const accMap = new Map<string, string>();
+      const accMap = new Map<string, { name: string; isAppSuggestion: boolean }>();
       if (Array.isArray(item.phu_kien)) {
         item.phu_kien.forEach((pk: unknown, idx: number) => {
           if (typeof pk === 'string' && pk.trim()) {
-            accMap.set(`pk-${item.id}-${idx}`, pk.trim());
+            accMap.set(`pk-${item.id}-${idx}`, {
+              name: pk.trim(),
+              isAppSuggestion: false,
+            });
           }
         });
       }
@@ -36,7 +54,10 @@ if (Array.isArray(kbRaw.trang_phuc)) {
             (gy.loai === 'phu_kien' || gy.loai === 'phoi_hien_dai') &&
             typeof gy.noi_dung === 'string'
           ) {
-            accMap.set(`gy-${item.id}-${idx}`, `${gy.noi_dung.trim()} (Gợi ý của app, không phải sự thật lịch sử)`);
+            accMap.set(`gy-${item.id}-${idx}`, {
+              name: gy.noi_dung.trim(),
+              isAppSuggestion: true,
+            });
           }
         });
       }
@@ -109,14 +130,37 @@ function resolveGeminiModel(): string {
   return DEFAULT_GEMINI_MODEL;
 }
 
-// Per-IP Rate Limiter (10 requests per minute)
+// Per-IP Rate Limiter (20 requests per minute) & Daily Cap (default 400)
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const DAILY_CAP = (() => {
+  const parsed = parseInt(process.env.DAILY_CAP || '400', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 400;
+})();
 const MAX_STRING_LENGTH = 300;
 const MAX_ACCESSORY_COUNT = 10;
-const ipRateLimits = new Map<string, { count: number; resetAt: number }>();
+const STYLE_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes in-process cache
+const TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes expiration for token
+const GEMINI_TIMEOUT_MS = 30 * 1000; // 30 seconds timeout
 
-function checkRateLimit(ip: string): { allowed: boolean; retryAfterSec: number } {
+const ipRateLimits = new Map<string, { count: number; resetAt: number }>();
+let dailyUsage = {
+  dateKey: new Date().toISOString().slice(0, 10),
+  count: 0,
+};
+
+interface PhuongAnCore {
+  ten: string;
+  mo_ta: string;
+  thanh_phan: string[];
+  ly_do_van_hoa: string;
+  ma_nguon: string | null;
+  goi_y_cua_app: string[];
+}
+
+const styleCache = new Map<string, { phuongAn: PhuongAnCore[]; expiresAt: number }>();
+
+function checkIpRateLimit(ip: string): { allowed: boolean; retryAfterSec: number } {
   const now = Date.now();
   if (ipRateLimits.size > 2000) {
     for (const [key, entry] of ipRateLimits.entries()) {
@@ -141,6 +185,57 @@ function checkRateLimit(ip: string): { allowed: boolean; retryAfterSec: number }
   return { allowed: true, retryAfterSec: 0 };
 }
 
+function checkDailyCap(): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (dailyUsage.dateKey !== today) {
+    dailyUsage = { dateKey: today, count: 0 };
+  }
+  return dailyUsage.count < DAILY_CAP;
+}
+
+function incrementDailyCap(): void {
+  const today = new Date().toISOString().slice(0, 10);
+  if (dailyUsage.dateKey !== today) {
+    dailyUsage = { dateKey: today, count: 1 };
+  } else {
+    dailyUsage.count += 1;
+  }
+}
+
+// Deterministic JSON canonicalization with sorted keys
+function canonicalizeJson(value: any): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return '[' + value.map((item) => canonicalizeJson(item)).join(',') + ']';
+  }
+  const sortedKeys = Object.keys(value).sort();
+  const parts: string[] = [];
+  for (const key of sortedKeys) {
+    const val = value[key];
+    if (val !== undefined) {
+      parts.push(`${JSON.stringify(key)}:${canonicalizeJson(val)}`);
+    }
+  }
+  return '{' + parts.join(',') + '}';
+}
+
+function signPhuongAnToken(
+  apiKey: string,
+  validatedInput: Record<string, any>,
+  phuongAn: PhuongAnCore,
+  exp: number
+): string {
+  const hmacKey = crypto.createHash('sha256').update('vpr:' + apiKey).digest();
+  const payload = canonicalizeJson({
+    input: validatedInput,
+    phuong_an: phuongAn,
+    exp,
+  });
+  return crypto.createHmac('sha256', hmacKey).update(payload).digest('hex');
+}
+
 function isSameOriginRequest(req: express.Request): boolean {
   const secFetchSite = req.headers['sec-fetch-site'];
   if (typeof secFetchSite === 'string' && secFetchSite === 'cross-site') {
@@ -149,7 +244,6 @@ function isSameOriginRequest(req: express.Request): boolean {
 
   const origin = req.headers.origin;
   if (!origin) {
-    // Non-CORS same-origin GET/POST without Origin header
     return true;
   }
 
@@ -173,6 +267,86 @@ function isSameOriginRequest(req: express.Request): boolean {
 
 function isValidShortString(val: unknown): val is string {
   return typeof val === 'string' && val.length > 0 && val.length <= MAX_STRING_LENGTH;
+}
+
+const STYLIST_SYSTEM_INSTRUCTION = [
+  'Bạn là Stylist tư vấn phối trang phục truyền thống Việt Nam của ứng dụng Việt Phục Remix.',
+  'RÀNG BUỘC BẤT BIẾN (BẮT BUỘC TUÂN THỦ):',
+  '1. Nguồn sự thật duy nhất là phần DỮ LIỆU được cung cấp trong prompt (từ kb-v3.json và boi-canh.json). Không tự thêm, đổi hay suy diễn thông tin lịch sử, văn hoá hay quy tắc ứng xử ngoài DỮ LIỆU; nếu thông tin không có trong DỮ LIỆU thì ghi rõ "Chưa có nguồn".',
+  '2. Mức chắc chắn chỉ có 3 giá trị: cao / trung_binh / thap. KHÔNG hiển thị số phần trăm (%) về độ chắc chắn hay độ tin cậy ở bất kỳ đâu.',
+  '3. Mọi lời khuyên phối đồ ứng dụng hoặc thông lệ ứng xử không dùng các từ tuyệt đối ("tuyệt đối", "bắt buộc", "luôn"). Mỗi dòng trong mảng goi_y_cua_app phải bắt đầu bằng "Gợi ý của app:".',
+  '4. Không dùng thuật ngữ "hữu nhậm" hoặc "tả nhậm"; nếu mô tả chiều vạt áo thì diễn đạt bằng hình thức (ví dụ: vạt trái phủ ngoài vạt phải).',
+  '5. Tạo từ 2 đến 3 phương án phối đồ (phuong_an) phù hợp với trang phục, bối cảnh, mức độ cách tân, bảng màu, phụ kiện và điều kiện thời tiết đã chọn.',
+  '6. Trường ma_nguon của mỗi phương án CHỈ được nhận đúng 1 mã nguồn có trong DỮ LIỆU (ví dụ mã nguồn KB như "S01" hoặc mã nguồn bối cảnh như "BC-di_chua_noi_ton_nghiem-1"), hoặc null nếu không có nguồn trực tiếp.',
+].join('\n');
+
+const STYLIST_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    phuong_an: {
+      type: Type.ARRAY,
+      description: 'Danh sách từ 2 đến 3 phương án phối đồ.',
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          ten: {
+            type: Type.STRING,
+            description: 'Tên phương án phối đồ ngắn gọn, rõ ràng.',
+          },
+          mo_ta: {
+            type: Type.STRING,
+            description: 'Mô tả tổng thể cách phối theo bối cảnh, mức cách tân và điều kiện thời tiết.',
+          },
+          thanh_phan: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'Danh sách các thành phần cụ thể của phương án (trang phục chính, màu sắc, phụ kiện đi kèm).',
+          },
+          ly_do_van_hoa: {
+            type: Type.STRING,
+            description: 'Lý giải sự phù hợp dựa trên dữ liệu KB và lưu ý bối cảnh; không tự suy diễn ngoài dữ liệu, nếu không có nguồn thì ghi "Chưa có nguồn".',
+          },
+          ma_nguon: {
+            type: Type.STRING,
+            nullable: true,
+            description: 'Một mã nguồn hợp lệ có trong DỮ LIỆU (mã KB như S01 hoặc mã bối cảnh BC-...) hoặc null.',
+          },
+          goi_y_cua_app: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: 'Các gợi ý phối đồ thực tế của ứng dụng, mỗi dòng bắt đầu bằng "Gợi ý của app:".',
+          },
+        },
+        required: ['ten', 'mo_ta', 'thanh_phan', 'ly_do_van_hoa', 'ma_nguon', 'goi_y_cua_app'],
+      },
+    },
+  },
+  required: ['phuong_an'],
+};
+
+function sanitizeTextConstraints(text: string): string {
+  return text
+    .replace(/hữu nhậm/gi, 'vạt trái phủ ngoài vạt phải')
+    .replace(/tả nhậm/gi, 'vạt phải phủ ngoài vạt trái')
+    .replace(/\b\d+(?:[.,]\d+)?\s*%/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function sanitizeSuggestionLine(line: string): string {
+  let cleaned = sanitizeTextConstraints(line)
+    .replace(/\btuyệt đối\b/gi, 'nên')
+    .replace(/\bbắt buộc\b/gi, 'khuyến khích')
+    .replace(/\bluôn luôn\b/gi, 'thường')
+    .replace(/\bluôn\b/gi, 'thường')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  if (!cleaned.startsWith('Gợi ý của app:')) {
+    cleaned = cleaned.replace(/^Gợi ý của app\s*[-–—:]?\s*/i, '');
+    cleaned = `Gợi ý của app: ${cleaned}`;
+  }
+  return cleaned;
 }
 
 async function startServer() {
@@ -226,13 +400,26 @@ async function startServer() {
     next();
   });
 
-  // Server-side Gemini client initialization
-  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
-  const hasValidKey = Boolean(apiKey && apiKey !== 'MY_GEMINI_API_KEY');
-  const ai = hasValidKey ? new GoogleGenAI({ apiKey }) : null;
+  // Helper to resolve current API key and Gemini client dynamically
+  function getGeminiContext(): { apiKey: string; hasValidKey: boolean; ai: GoogleGenAI | null } {
+    const currentKey = (process.env.GEMINI_API_KEY || '').trim();
+    const valid = Boolean(currentKey && currentKey !== 'MY_GEMINI_API_KEY');
+    const client = valid
+      ? new GoogleGenAI({
+          apiKey: currentKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            },
+          },
+        })
+      : null;
+    return { apiKey: currentKey, hasValidKey: valid, ai: client };
+  }
 
   // Health check endpoint
   app.get('/api/health', (_req, res) => {
+    const { hasValidKey } = getGeminiContext();
     res.json({
       status: 'ok',
       hasServerKey: hasValidKey,
@@ -240,16 +427,16 @@ async function startServer() {
     });
   });
 
-  // Backend Gemini proxy for outfit styling & cultural advisory
-  app.post('/api/gemini/suggest-style', async (req, res) => {
+  // B4: Stylist structured output endpoint
+  app.post('/api/style', async (req, res) => {
     const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
-    const rateStatus = checkRateLimit(clientIp);
+    const rateStatus = checkIpRateLimit(clientIp);
     if (!rateStatus.allowed) {
       res.setHeader('Retry-After', String(rateStatus.retryAfterSec));
       return res.status(429).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (vượt quá giới hạn 10 yêu cầu/phút, vui lòng thử lại sau).',
+        message: 'Chưa kiểm tra được (vượt quá giới hạn 20 yêu cầu/phút, vui lòng thử lại sau).',
       });
     }
 
@@ -261,13 +448,21 @@ async function startServer() {
       });
     }
 
-    // Validate all string fields length <= 300 chars
+    // Validate top-level keys and string lengths
+    const allowedTopKeys = new Set([
+      'outfitId',
+      'purposeId',
+      'remixLevel',
+      'colorSchemeId',
+      'selectedAccessoryIds',
+      'weather',
+    ]);
     for (const [key, value] of Object.entries(req.body)) {
-      if (typeof key !== 'string' || key.length > 64) {
+      if (!allowedTopKeys.has(key)) {
         return res.status(400).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
-          message: 'Chưa kiểm tra được (trường dữ liệu không hợp lệ).',
+          message: 'Chưa kiểm tra được (trường dữ liệu không nằm trong danh mục cho phép).',
         });
       }
       if (typeof value === 'string' && value.length > MAX_STRING_LENGTH) {
@@ -282,12 +477,9 @@ async function startServer() {
     const {
       outfitId,
       purposeId,
-      purpose,
       remixLevel,
       colorSchemeId,
-      colors,
       selectedAccessoryIds,
-      accessories,
       weather,
     } = req.body;
 
@@ -296,176 +488,410 @@ async function startServer() {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (outfitId không tồn tại trong kho tri thức KB-v3).',
+        message: 'Chưa kiểm tra được (outfitId không tồn tại trong KB-v3).',
       });
     }
     const kbOutfit = kbOutfitsMap.get(outfitId);
 
     // 2. Validate purposeId against boi-canh.json
-    const rawPurposeKey = purposeId !== undefined ? purposeId : purpose;
-    const purposeKey = rawPurposeKey === undefined ? 'chup_ky_yeu' : rawPurposeKey;
-    if (!isValidShortString(purposeKey) || !boiCanhMap.has(purposeKey)) {
+    if (!isValidShortString(purposeId) || !boiCanhMap.has(purposeId)) {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (mã bối cảnh sử dụng không tồn tại trong boi-canh.json).',
+        message: 'Chưa kiểm tra được (purposeId không tồn tại trong boi-canh.json).',
       });
     }
-    const kbBoiCanh = boiCanhMap.get(purposeKey);
-    const safePurposeLabel = `${kbBoiCanh.ten} (${kbBoiCanh.tinh_than})`;
+    const kbBoiCanh = boiCanhMap.get(purposeId);
 
-    // 3. Validate remixLevel against allowlist (1, 2, 3)
-    const parsedLevel =
-      remixLevel === undefined
-        ? 2
-        : typeof remixLevel === 'number'
-        ? remixLevel
-        : typeof remixLevel === 'string' && /^[123]$/.test(remixLevel)
-        ? Number(remixLevel)
-        : NaN;
-    if (!ALLOWED_REMIX_LEVELS.has(parsedLevel)) {
-      return res.status(400).json({
-        success: false,
-        error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (mức độ cách tân chỉ nhận giá trị 1, 2 hoặc 3).',
-      });
-    }
-    const safeRemixLevelLabel = ALLOWED_REMIX_LEVELS.get(parsedLevel);
-
-    // 4. Validate color scheme against allowlist
-    const rawColorKey = colorSchemeId !== undefined ? colorSchemeId : colors;
-    const colorKey = rawColorKey === undefined ? 'men-lam-chu-dau' : rawColorKey;
-    if (!isValidShortString(colorKey) || !ALLOWED_COLOR_SCHEMES.has(colorKey)) {
-      return res.status(400).json({
-        success: false,
-        error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (mã bảng màu không nằm trong danh sách cho phép).',
-      });
-    }
-    const safeColorLabel = ALLOWED_COLOR_SCHEMES.get(colorKey);
-
-    // 5. Validate weather object ({ season, temperature, timeOfDay }) against allowlists
-    const rawWeather =
-      weather === undefined
-        ? { season: 'thu', temperature: 'mat_me', timeOfDay: 'buoi_sang' }
-        : weather;
+    // 3. Validate remixLevel (1 | 2 | 3)
     if (
-      !rawWeather ||
-      typeof rawWeather !== 'object' ||
-      Array.isArray(rawWeather) ||
-      !isValidShortString(rawWeather.season) ||
-      !ALLOWED_SEASONS.has(rawWeather.season) ||
-      !isValidShortString(rawWeather.temperature) ||
-      !ALLOWED_TEMPERATURES.has(rawWeather.temperature) ||
-      !isValidShortString(rawWeather.timeOfDay) ||
-      !ALLOWED_TIMES_OF_DAY.has(rawWeather.timeOfDay)
+      typeof remixLevel !== 'number' ||
+      !Number.isInteger(remixLevel) ||
+      !ALLOWED_REMIX_LEVELS.has(remixLevel)
     ) {
       return res.status(400).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (điều kiện thời tiết/thời điểm không nằm trong danh sách cho phép).',
+        message: 'Chưa kiểm tra được (remixLevel chỉ nhận số nguyên 1, 2 hoặc 3).',
       });
     }
-    const safeWeatherLabel = `${ALLOWED_SEASONS.get(rawWeather.season)} · ${ALLOWED_TEMPERATURES.get(rawWeather.temperature)} · ${ALLOWED_TIMES_OF_DAY.get(rawWeather.timeOfDay)}`;
 
-    // 6. Validate accessories strictly by allowed IDs for this outfit
-    const rawAccessories = selectedAccessoryIds !== undefined ? selectedAccessoryIds : accessories;
+    // 4. Validate colorSchemeId
+    if (!isValidShortString(colorSchemeId) || !ALLOWED_COLOR_SCHEMES.has(colorSchemeId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (colorSchemeId không nằm trong danh mục cho phép).',
+      });
+    }
+
+    // 5. Validate selectedAccessoryIds against the selected outfit in KB-v3
+    if (!Array.isArray(selectedAccessoryIds) || selectedAccessoryIds.length > MAX_ACCESSORY_COUNT) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (selectedAccessoryIds phải là mảng hợp lệ).',
+      });
+    }
     const outfitAccMap = kbAccessoriesMap.get(outfitId) || new Map();
-    const safeAccessoryLabels = [];
+    const validatedAccessoryIds: string[] = [];
+    const selectedAccessoryDescriptions: string[] = [];
 
-    if (rawAccessories !== undefined) {
-      if (!Array.isArray(rawAccessories) || rawAccessories.length > MAX_ACCESSORY_COUNT) {
+    for (const accId of selectedAccessoryIds) {
+      if (!isValidShortString(accId) || !outfitAccMap.has(accId)) {
         return res.status(400).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
-          message: 'Chưa kiểm tra được (danh sách mã phụ kiện không hợp lệ).',
+          message: 'Chưa kiểm tra được (mã phụ kiện không thuộc trang phục đã chọn).',
         });
       }
-      for (const accId of rawAccessories) {
-        if (!isValidShortString(accId) || !outfitAccMap.has(accId)) {
-          return res.status(400).json({
-            success: false,
-            error: 'chua_kiem_tra_duoc',
-            message: 'Chưa kiểm tra được (mã phụ kiện không thuộc trang phục đã chọn trong KB-v3).',
-          });
-        }
-        safeAccessoryLabels.push(outfitAccMap.get(accId));
+      if (!validatedAccessoryIds.includes(accId)) {
+        validatedAccessoryIds.push(accId);
+        const accInfo = outfitAccMap.get(accId)!;
+        selectedAccessoryDescriptions.push(
+          accInfo.isAppSuggestion
+            ? `${accInfo.name} [Gợi ý của app, không phải sự thật lịch sử]`
+            : `${accInfo.name} [Tư liệu KB-v3]`
+        );
       }
     }
 
-    // Ensure API key is configured before attempting AI call
-    if (!ai) {
+    // 6. Validate weather object { season, temperature, timeOfDay }
+    if (
+      !weather ||
+      typeof weather !== 'object' ||
+      Array.isArray(weather) ||
+      !isValidShortString(weather.season) ||
+      !ALLOWED_SEASONS.has(weather.season) ||
+      !isValidShortString(weather.temperature) ||
+      !ALLOWED_TEMPERATURES.has(weather.temperature) ||
+      !isValidShortString(weather.timeOfDay) ||
+      !ALLOWED_TIMES_OF_DAY.has(weather.timeOfDay)
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Chưa kiểm tra được (weather không đúng cấu trúc hoặc giá trị cho phép).',
+      });
+    }
+
+    const validatedInput = {
+      outfitId,
+      purposeId,
+      remixLevel,
+      colorSchemeId,
+      selectedAccessoryIds: [...validatedAccessoryIds].sort(),
+      weather: {
+        season: weather.season,
+        temperature: weather.temperature,
+        timeOfDay: weather.timeOfDay,
+      },
+    };
+
+    const { apiKey, hasValidKey, ai } = getGeminiContext();
+
+    // Ensure API key is configured
+    if (!hasValidKey || !ai) {
       return res.status(503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (chưa cấu hình GEMINI_API_KEY trên máy chủ).',
+        message: 'Chưa kiểm tra được',
       });
     }
 
+    // Check 10-minute in-process cache by validated ID combination
+    const cacheKey = canonicalizeJson(validatedInput);
+    const now = Date.now();
+    const cachedEntry = styleCache.get(cacheKey);
+    if (cachedEntry && now < cachedEntry.expiresAt) {
+      const exp = now + TOKEN_TTL_MS;
+      const signedPhuongAn = cachedEntry.phuongAn.map((pa) => ({
+        ...pa,
+        exp,
+        token: signPhuongAnToken(apiKey, validatedInput, pa, exp),
+      }));
+      return res.json({
+        success: true,
+        phuong_an: signedPhuongAn,
+      });
+    }
+
+    // Check Daily Cap before invoking Gemini API
+    if (!checkDailyCap()) {
+      return res.status(429).json({
+        success: false,
+        error: 'chua_kiem_tra_duoc',
+        message: 'Hệ thống đã đạt giới hạn hôm nay',
+      });
+    }
+
+    // Build allowed source codes set (KB sources + BC-<id_boi_canh>-<n> sources)
+    const allowedSourceCodes = new Set<string>();
+    const kbSourceLines: string[] = [];
+    if (Array.isArray(kbOutfit.nguon)) {
+      for (const code of kbOutfit.nguon) {
+        if (typeof code === 'string' && code.trim()) {
+          const cleanCode = code.trim();
+          allowedSourceCodes.add(cleanCode);
+          const srcInfo = kbSourcesMap.get(cleanCode);
+          kbSourceLines.push(
+            srcInfo
+              ? `- Mã [${cleanCode}]: ${srcInfo.ten} (Loại: ${srcInfo.loai})`
+              : `- Mã [${cleanCode}]: Chưa có nguồn`
+          );
+        }
+      }
+    }
+    for (const code of kbSourcesMap.keys()) {
+      allowedSourceCodes.add(code);
+    }
+
+    const bcSourceLines: string[] = [];
+    const bcNguonArray: string[] = Array.isArray(kbBoiCanh.nguon) ? kbBoiCanh.nguon : [];
+    bcNguonArray.forEach((url: string, idx: number) => {
+      const bcCode = `BC-${kbBoiCanh.id}-${idx + 1}`;
+      allowedSourceCodes.add(bcCode);
+      bcSourceLines.push(`- Mã [${bcCode}]: ${url}`);
+    });
+
+    // Format KB goi_y_phoi_do (marked as app suggestion)
+    const kbGoiYLines = Array.isArray(kbOutfit.goi_y_phoi_do)
+      ? kbOutfit.goi_y_phoi_do.map(
+          (gy: any) =>
+            `- [Gợi ý của app, không phải sự thật lịch sử] (${gy.loai || 'goi_y'}): ${gy.noi_dung}${
+              gy.ghi_chu ? ` — Ghi chú: ${gy.ghi_chu}` : ''
+            }`
+        )
+      : [];
+
+    // Format KB khong_nen_khi_remix
+    const kbKhongNenLines = Array.isArray(kbOutfit.khong_nen_khi_remix)
+      ? kbOutfit.khong_nen_khi_remix.map((w: any) =>
+          typeof w === 'string' ? `- ${w}` : `- ${w?.noi_dung || ''} (Căn cứ: ${w?.can_cu || 'Chưa có nguồn'})`
+        )
+      : [];
+
+    // Format Context nen_uu_tien (marked as app suggestion without source)
+    const bcNenUuTienLines = Array.isArray(kbBoiCanh.nen_uu_tien)
+      ? kbBoiCanh.nen_uu_tien.map(
+          (item: any) =>
+            `- Trang phục ${item.trang_phuc_id}: ${item.ly_do} [Gợi ý của app, chưa có nguồn]`
+        )
+      : [];
+
+    // Format Context luu_y with mapped BC-<id>-<n> codes from nguon_chi_so
+    const bcLuuYLines = Array.isArray(kbBoiCanh.luu_y)
+      ? kbBoiCanh.luu_y.map((ly: any) => {
+          const loaiText =
+            ly.loai === 'thong_le_ung_xu' ? 'Thông lệ ứng xử (không phải quy định)' : 'Gợi ý thẩm mỹ';
+          const mappedCodes = Array.isArray(ly.nguon_chi_so)
+            ? ly.nguon_chi_so
+                .filter((i: unknown) => typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < bcNguonArray.length)
+                .map((i: number) => `BC-${kbBoiCanh.id}-${i + 1}`)
+            : [];
+          const codeLabel = mappedCodes.length > 0 ? mappedCodes.join(', ') : 'Chưa có nguồn';
+          return `- [${loaiText}] ${ly.noi_dung} (Mã nguồn bối cảnh: ${codeLabel})`;
+        })
+      : [];
+
+    const dataPrompt = [
+      '=== DỮ LIỆU TRANG PHỤC TỪ KB-v3 ===',
+      `- Mã trang phục: ${kbOutfit.id}`,
+      `- Tên trang phục: ${kbOutfit.ten}`,
+      `- Thời kỳ: ${kbOutfit.thoi_ky || 'Chưa có nguồn'}`,
+      `- Mức chắc chắn tư liệu: ${kbOutfit.muc_chac_chan}`,
+      '- Bộ phận cấu tạo:',
+      `  + Cổ áo: ${kbOutfit.bo_phan?.co || 'Chưa có nguồn'}`,
+      `  + Tay áo: ${kbOutfit.bo_phan?.tay || 'Chưa có nguồn'}`,
+      `  + Thân áo: ${kbOutfit.bo_phan?.than || 'Chưa có nguồn'}`,
+      `  + Vật liệu: ${kbOutfit.bo_phan?.vat_lieu || 'Chưa có nguồn'}`,
+      '- Đặc điểm nhận diện hình ảnh:',
+      ...(Array.isArray(kbOutfit.dac_diem_nhan_dien_hinh_anh) && kbOutfit.dac_diem_nhan_dien_hinh_anh.length > 0
+        ? kbOutfit.dac_diem_nhan_dien_hinh_anh.map((d: string) => `  + ${d}`)
+        : ['  + Chưa có nguồn']),
+      '- Phụ kiện trong tư liệu KB:',
+      ...(Array.isArray(kbOutfit.phu_kien) && kbOutfit.phu_kien.length > 0
+        ? kbOutfit.phu_kien.map((p: string) => `  + ${p}`)
+        : ['  + Chưa có nguồn']),
+      '- Lưu ý không nên khi remix từ KB:',
+      ...(kbKhongNenLines.length > 0 ? kbKhongNenLines : ['- Chưa có nguồn']),
+      '- Gợi ý phối đồ từ KB (Gợi ý của app, không phải sự thật lịch sử):',
+      ...(kbGoiYLines.length > 0 ? kbGoiYLines : ['- Chưa có nguồn']),
+      '- Nguồn tư liệu trang phục từ KB:',
+      ...(kbSourceLines.length > 0 ? kbSourceLines : ['- Chưa có nguồn']),
+      '',
+      '=== DỮ LIỆU BỐI CẢNH TỪ boi-canh.json ===',
+      `- Mã bối cảnh: ${kbBoiCanh.id}`,
+      `- Tên bối cảnh: ${kbBoiCanh.ten}`,
+      `- Tinh thần: ${kbBoiCanh.tinh_than}`,
+      `- Mức cách tân gợi ý của bối cảnh: ${kbBoiCanh.muc_remix} (${kbBoiCanh.muc_remix_ghi_chu || 'Chưa có nguồn'})`,
+      '- Khuyến nghị trang phục ưu tiên (Gợi ý của app, chưa có nguồn):',
+      ...(bcNenUuTienLines.length > 0 ? bcNenUuTienLines : ['- Chưa có nguồn']),
+      '- Lưu ý của bối cảnh:',
+      ...(bcLuuYLines.length > 0 ? bcLuuYLines : ['- Chưa có nguồn']),
+      '- Nguồn tham khảo của bối cảnh:',
+      ...(bcSourceLines.length > 0 ? bcSourceLines : ['- Chưa có nguồn']),
+      '',
+      '=== LỰA CHỌN ĐẦU VÀO ĐÃ KIỂM TRA ===',
+      `- Trang phục: ${kbOutfit.ten} (${kbOutfit.id})`,
+      `- Bối cảnh: ${kbBoiCanh.ten} (${kbBoiCanh.id})`,
+      `- Mức độ cách tân người dùng chọn: ${ALLOWED_REMIX_LEVELS.get(remixLevel)}`,
+      `- Bảng màu người dùng chọn: ${ALLOWED_COLOR_SCHEMES.get(colorSchemeId)}`,
+      `- Phụ kiện người dùng chọn: ${
+        selectedAccessoryDescriptions.length > 0
+          ? selectedAccessoryDescriptions.join('; ')
+          : 'Không chọn phụ kiện'
+      }`,
+      `- Điều kiện thời tiết & thời điểm: ${ALLOWED_SEASONS.get(weather.season)} · ${ALLOWED_TEMPERATURES.get(
+        weather.temperature
+      )} · ${ALLOWED_TIMES_OF_DAY.get(weather.timeOfDay)}`,
+      '',
+      'Hãy trả về JSON đúng theo schema gồm 2 đến 3 phương án phối đồ (phuong_an).',
+    ].join('\n');
+
+    incrementDailyCap();
+
     try {
-      const kbWarnings = Array.isArray(kbOutfit.khong_nen_khi_remix)
-        ? kbOutfit.khong_nen_khi_remix
-            .map((w: any) => (typeof w === 'string' ? w : w?.noi_dung || ''))
-            .filter(Boolean)
-            .join('; ')
-        : '';
-
-      // Prompt built exclusively from validated KB-v3 data and static server allowlists
-      const prompt = [
-        'Bạn là trợ lý đối chiếu thông tin trang phục truyền thống Việt Nam dựa trên kho dữ liệu KB-v3.',
-        'Nguyên tắc bắt buộc:',
-        '1. Chỉ dựa trên thông tin trang phục trong KB-v3 được cung cấp bên dưới; không tự suy diễn sự thật lịch sử ngoài KB, nếu thông tin không có trong KB thì ghi "Chưa có nguồn".',
-        '2. Không hiển thị số phần trăm về độ chắc chắn hay độ tin cậy.',
-        '3. Mọi lời khuyên phối đồ hiện đại phải ghi rõ là "Gợi ý của app, không phải sự thật lịch sử" và không dùng các từ tuyệt đối ("tuyệt đối", "bắt buộc", "luôn").',
-        '4. Không dùng thuật ngữ "hữu nhậm" hoặc "tả nhậm"; nếu mô tả chiều vạt áo thì diễn đạt bằng hình thức (ví dụ: vạt trái phủ ngoài vạt phải).',
-        '',
-        'Dữ liệu trang phục từ KB-v3:',
-        `- Tên trang phục: ${kbOutfit.ten} (Mã: ${kbOutfit.id})`,
-        `- Thời kỳ trong KB: ${kbOutfit.thoi_ky || 'Chưa có nguồn'}`,
-        `- Mức chắc chắn tư liệu: ${kbOutfit.muc_chac_chan}`,
-        `- Cấu tạo cổ áo: ${kbOutfit.bo_phan?.co || 'Chưa có nguồn'}`,
-        `- Cấu tạo tay áo: ${kbOutfit.bo_phan?.tay || 'Chưa có nguồn'}`,
-        `- Cấu tạo thân áo: ${kbOutfit.bo_phan?.than || 'Chưa có nguồn'}`,
-        `- Lưu ý khi phối từ KB: ${kbWarnings || 'Chưa có nguồn'}`,
-        '',
-        'Cấu hình bản phối người dùng chọn (từ danh mục cho phép):',
-        `- Mục đích sử dụng: ${safePurposeLabel}`,
-        `- Mức độ cách tân: ${safeRemixLevelLabel}`,
-        `- Bảng màu: ${safeColorLabel}`,
-        `- Phụ kiện đã chọn: ${safeAccessoryLabels.length > 0 ? safeAccessoryLabels.join('; ') : 'Không chọn phụ kiện'}`,
-        `- Thời tiết: ${safeWeatherLabel}`,
-        '',
-        'Hãy viết nhận xét ngắn gọn (3-4 câu) cho bản phối trên, tuân thủ nghiêm ngặt các nguyên tắc trên.',
-      ].join('\n');
-
       const modelName = resolveGeminiModel();
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
+
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('GEMINI_TIMEOUT'));
+        }, GEMINI_TIMEOUT_MS);
       });
 
-      const text = typeof response?.text === 'string' ? response.text.trim() : '';
-      if (!text) {
+      const response = await Promise.race([
+        ai.models.generateContent({
+          model: modelName,
+          contents: dataPrompt,
+          config: {
+            systemInstruction: STYLIST_SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseSchema: STYLIST_RESPONSE_SCHEMA,
+            temperature: 0.4,
+          },
+        }),
+        timeoutPromise,
+      ]);
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      const rawText = typeof response?.text === 'string' ? response.text.trim() : '';
+      if (!rawText) {
         return res.status(503).json({
           success: false,
           error: 'chua_kiem_tra_duoc',
-          message: 'Chưa kiểm tra được (dịch vụ AI không trả về kết quả).',
+          message: 'Chưa kiểm tra được',
         });
       }
 
+      let parsedJson: any;
+      try {
+        parsedJson = JSON.parse(rawText);
+      } catch {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      if (!parsedJson || !Array.isArray(parsedJson.phuong_an) || parsedJson.phuong_an.length < 2) {
+        return res.status(503).json({
+          success: false,
+          error: 'chua_kiem_tra_duoc',
+          message: 'Chưa kiểm tra được',
+        });
+      }
+
+      const rawList = parsedJson.phuong_an.slice(0, 3);
+      const sanitizedList: PhuongAnCore[] = [];
+
+      for (const item of rawList) {
+        if (
+          !item ||
+          typeof item !== 'object' ||
+          typeof item.ten !== 'string' ||
+          !item.ten.trim() ||
+          typeof item.mo_ta !== 'string' ||
+          !item.mo_ta.trim() ||
+          !Array.isArray(item.thanh_phan) ||
+          typeof item.ly_do_van_hoa !== 'string' ||
+          !item.ly_do_van_hoa.trim() ||
+          !Array.isArray(item.goi_y_cua_app)
+        ) {
+          return res.status(503).json({
+            success: false,
+            error: 'chua_kiem_tra_duoc',
+            message: 'Chưa kiểm tra được',
+          });
+        }
+
+        const thanhPhan = item.thanh_phan
+          .filter((tp: unknown) => typeof tp === 'string' && tp.trim().length > 0)
+          .map((tp: string) => sanitizeTextConstraints(tp));
+
+        const goiYCuaApp = item.goi_y_cua_app
+          .filter((gy: unknown) => typeof gy === 'string' && gy.trim().length > 0)
+          .map((gy: string) => sanitizeSuggestionLine(gy));
+
+        if (thanhPhan.length === 0 || goiYCuaApp.length === 0) {
+          return res.status(503).json({
+            success: false,
+            error: 'chua_kiem_tra_duoc',
+            message: 'Chưa kiểm tra được',
+          });
+        }
+
+        // Rule 1 & 6: ma_nguon must be a valid KB code or BC-<id>-<n> code, otherwise null
+        let validMaNguon: string | null = null;
+        if (typeof item.ma_nguon === 'string' && item.ma_nguon.trim()) {
+          const candidate = item.ma_nguon.trim().replace(/^\[|\]$/g, '');
+          if (allowedSourceCodes.has(candidate)) {
+            validMaNguon = candidate;
+          }
+        }
+
+        sanitizedList.push({
+          ten: sanitizeTextConstraints(item.ten),
+          mo_ta: sanitizeTextConstraints(item.mo_ta),
+          thanh_phan: thanhPhan,
+          ly_do_van_hoa: sanitizeTextConstraints(item.ly_do_van_hoa),
+          ma_nguon: validMaNguon,
+          goi_y_cua_app: goiYCuaApp,
+        });
+      }
+
+      // Store in 10-minute in-process cache (evict expired if map grows)
+      if (styleCache.size > 200) {
+        const currentTs = Date.now();
+        for (const [k, v] of styleCache.entries()) {
+          if (currentTs >= v.expiresAt) styleCache.delete(k);
+        }
+      }
+      styleCache.set(cacheKey, {
+        phuongAn: sanitizedList,
+        expiresAt: Date.now() + STYLE_CACHE_TTL_MS,
+      });
+
+      const exp = Date.now() + TOKEN_TTL_MS;
+      const signedPhuongAn = sanitizedList.map((pa) => ({
+        ...pa,
+        exp,
+        token: signPhuongAnToken(apiKey, validatedInput, pa, exp),
+      }));
+
       return res.json({
         success: true,
-        mode: 'live_gemini',
-        model: modelName,
-        text,
+        phuong_an: signedPhuongAn,
       });
     } catch {
-      // Do not log API keys, request payloads, or user content
-      console.warn('[Gemini Proxy] Upstream generation request failed.');
+      // Return honest 503 error state without logging sensitive details or triggering console error overlay
       return res.status(503).json({
         success: false,
         error: 'chua_kiem_tra_duoc',
-        message: 'Chưa kiểm tra được (lỗi kết nối hoặc dịch vụ AI tạm thời gián đoạn).',
+        message: 'Chưa kiểm tra được',
       });
     }
   });
@@ -493,6 +919,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
+    const { hasValidKey } = getGeminiContext();
     console.log(
       `[Việt Phục Remix] Server listening on port ${PORT} (Gemini Proxy: ${hasValidKey ? 'Configured' : 'Unconfigured'}, Model: ${resolveGeminiModel()})`
     );
