@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import {
   ShieldCheck,
   BookOpen,
@@ -87,7 +88,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
     if (status === 'loading') {
       return (
         <span
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FAF7F2] text-[#6C7A87] border border-[#DED7C6]"
+          className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#FAF7F2] text-[#4A5560] border border-[#DED7C6]"
           title="Đang gửi thẩm định Cultural Guardian"
         >
           <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C88E1B] shrink-0" />
@@ -102,7 +103,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FBEFEF] text-[#B93826] border border-[#B93826]/30 hover:bg-[#F6DFDF] cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#FBEFEF] text-[#8E2516] border border-[#B93826]/35 hover:bg-[#F6DFDF] cursor-pointer transition-colors"
             title="Bấm để xem chi tiết hoặc thử lại"
           >
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -123,8 +124,8 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
     let badgeText = 'Cần lưu ý';
     let badgeStyle = {
       bg: 'bg-[#FDF9F0]',
-      text: 'text-[#8B5A2B]',
-      border: 'border-[#C88E1B]/35',
+      text: 'text-[#7C4D1B]',
+      border: 'border-[#C88E1B]/40',
       hover: 'hover:bg-[#F9F2E0]',
       icon: <AlertTriangle className="w-3.5 h-3.5 text-[#C88E1B] shrink-0" />,
     };
@@ -134,7 +135,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
       badgeStyle = {
         bg: 'bg-[#E9F2EE]',
         text: 'text-[#2E6254]',
-        border: 'border-[#2E6254]/30',
+        border: 'border-[#2E6254]/35',
         hover: 'hover:bg-[#D9EAE2]',
         icon: <ShieldCheck className="w-3.5 h-3.5 text-[#2E6254] shrink-0" />,
       };
@@ -142,8 +143,8 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
       badgeText = 'Dễ sai lệch văn hoá';
       badgeStyle = {
         bg: 'bg-[#FBEFEF]',
-        text: 'text-[#B93826]',
-        border: 'border-[#B93826]/30',
+        text: 'text-[#8E2516]',
+        border: 'border-[#B93826]/35',
         hover: 'hover:bg-[#F6DFDF]',
         icon: <AlertTriangle className="w-3.5 h-3.5 text-[#B93826] shrink-0" />,
       };
@@ -154,7 +155,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${badgeStyle.bg} ${badgeStyle.text} border ${badgeStyle.border} ${badgeStyle.hover} cursor-pointer transition-colors shadow-2xs`}
+          className={`inline-flex items-center gap-1.5 min-h-[44px] px-3.5 py-1.5 rounded-xl text-xs font-bold ${badgeStyle.bg} ${badgeStyle.text} border ${badgeStyle.border} ${badgeStyle.hover} cursor-pointer transition-colors shadow-2xs`}
           title="Bấm để xem chi tiết bảo chứng Cultural Guardian"
         >
           {badgeStyle.icon}
@@ -177,10 +178,10 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
       return {
         title: 'Chưa kiểm tra qua AI',
         desc: 'Đang kết nối dịch vụ đối chiếu bảo chứng tự động.',
-        color: 'text-[#6C7A87]',
+        color: 'text-[#4A5560]',
         bg: 'bg-[#F2EFE9]',
         borderColor: 'border-[#DED7C6]',
-        tagBg: 'bg-white text-[#52606D]',
+        tagBg: 'bg-white text-[#4A5560]',
       };
     }
     switch (certaintyLevel) {
@@ -190,27 +191,27 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
           desc: 'Có nhiều nguồn tư liệu lịch sử uy tín độc lập đối chiếu.',
           color: 'text-[#1E3F5A]',
           bg: 'bg-[#EBF2F7]',
-          borderColor: 'border-[#1E3F5A]/25',
+          borderColor: 'border-[#1E3F5A]/30',
           tagBg: 'bg-white text-[#1E3F5A]',
         };
       case 'trung_binh':
         return {
           title: 'Mức chắc chắn: Trung bình',
           desc: 'Tư liệu còn giả thuyết chưa thống nhất hoặc chỉ dựa trên một nguồn đơn lẻ.',
-          color: 'text-[#8B5A2B]',
+          color: 'text-[#7C4D1B]',
           bg: 'bg-[#FDF9F0]',
-          borderColor: 'border-[#C88E1B]/35',
-          tagBg: 'bg-white text-[#8B5A2B]',
+          borderColor: 'border-[#C88E1B]/40',
+          tagBg: 'bg-white text-[#7C4D1B]',
         };
       case 'thap':
       default:
         return {
           title: 'Mức chắc chắn: Thấp',
           desc: 'Chưa có đủ nguồn tư liệu xác thực trong các trích đoạn đối chiếu.',
-          color: 'text-[#B93826]',
+          color: 'text-[#8E2516]',
           bg: 'bg-[#FBEFEF]',
-          borderColor: 'border-[#B93826]/30',
-          tagBg: 'bg-white text-[#B93826]',
+          borderColor: 'border-[#B93826]/35',
+          tagBg: 'bg-white text-[#8E2516]',
         };
     }
   };
@@ -223,7 +224,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-1.5 text-xs text-[#1E3F5A] hover:text-[#12283A] font-medium cursor-pointer transition-colors group text-left"
+          className="inline-flex items-center gap-1.5 min-h-[36px] text-xs text-[#1E3F5A] hover:text-[#12283A] font-medium cursor-pointer transition-colors group text-left"
           title="Xem nguồn tư liệu và quy chuẩn văn hóa"
         >
           <ShieldCheck className="w-3.5 h-3.5 text-[#B93826] shrink-0" />
@@ -247,22 +248,22 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
   }
 
   return (
-    <div className={`rounded-xl border ${style.borderColor} ${style.bg} p-4 text-[#161A1D] transition-all`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`rounded-2xl border ${style.borderColor} ${style.bg} p-4 text-[#161A1D] transition-all shadow-2xs`}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white/90 border border-[#DED7C6] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+          <div className="w-9 h-9 rounded-xl bg-white border border-[#DED7C6] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
             <ShieldCheck className="w-4 h-4 text-[#B93826]" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-sm tracking-tight text-[#161A1D]">
+              <span className="font-bold text-sm tracking-tight text-[#161A1D]">
                 {label}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded border border-[#DED7C6] font-semibold ${style.tagBg}`}>
+              <span className={`text-xs px-2.5 py-0.5 rounded-md border border-[#DED7C6] font-semibold ${style.tagBg}`}>
                 {style.title}
               </span>
             </div>
-            <p className="text-xs text-[#52606D] mt-0.5 leading-relaxed">
+            <p className="text-xs text-[#4A5560] mt-1 leading-relaxed">
               {style.desc}
             </p>
           </div>
@@ -272,7 +273,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="text-xs font-medium text-[#1E3F5A] hover:text-[#12283A] underline underline-offset-2 shrink-0 cursor-pointer pt-0.5"
+            className="min-h-[40px] px-3 py-1.5 rounded-xl bg-white border border-[#DED7C6] hover:border-[#1E3F5A] text-xs font-semibold text-[#1E3F5A] hover:text-[#12283A] shrink-0 cursor-pointer self-start transition-colors shadow-2xs"
           >
             Nguồn tư liệu ({sources.length})
           </button>
@@ -310,15 +311,15 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           label: 'Hài hoà',
           bg: 'bg-[#E9F2EE]',
           text: 'text-[#2E6254]',
-          border: 'border-[#2E6254]/30',
+          border: 'border-[#2E6254]/35',
           desc: 'Phương án phối đồ tôn trọng cấu trúc cốt lõi của trang phục và phù hợp với tinh thần bối cảnh.',
         };
       case 'can_luu_y':
         return {
           label: 'Cần lưu ý',
           bg: 'bg-[#FDF9F0]',
-          text: 'text-[#8B5A2B]',
-          border: 'border-[#C88E1B]/35',
+          text: 'text-[#7C4D1B]',
+          border: 'border-[#C88E1B]/40',
           desc: 'Có điểm cần lưu ý về thông lệ ứng xử theo bối cảnh hoặc cách phối đồ.',
         };
       case 'de_sai_lech':
@@ -326,8 +327,8 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
         return {
           label: 'Dễ sai lệch văn hoá',
           bg: 'bg-[#FBEFEF]',
-          text: 'text-[#B93826]',
-          border: 'border-[#B93826]/30',
+          text: 'text-[#8E2516]',
+          border: 'border-[#B93826]/35',
           desc: 'Bản phối có nguy cơ vi phạm quy tắc lịch sử hoặc làm sai lệch kết cấu nhận diện cốt lõi của trang phục.',
         };
     }
@@ -337,18 +338,18 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
 
   const renderSourceContent = (maNguon: string | null) => {
     if (!maNguon) {
-      return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+      return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
     }
 
     const kbSrc = KB_NGUON[maNguon];
     if (kbSrc) {
       return (
         <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
             [{maNguon}]
           </span>
           <span className="font-medium text-[#161A1D]">{kbSrc.ten}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#52606D] font-semibold">
+          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] text-[#4A5560] font-semibold">
             {getLoaiNguonLabel(kbSrc.loai)}
           </span>
           {kbSrc.url && (
@@ -356,10 +357,10 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
               href={kbSrc.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-0.5"
+              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-1 font-medium"
             >
               <span>Xem tư liệu</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           )}
         </div>
@@ -378,10 +379,10 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
 
       return (
         <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
             [{maNguon}]
           </span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FDF9F0] border border-[#C88E1B]/30 text-[#8B5A2B] font-semibold">
+          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FDF9F0] border border-[#C88E1B]/35 text-[#7C4D1B] font-semibold">
             Thông lệ bối cảnh
           </span>
           {url ? (
@@ -389,10 +390,10 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-0.5 break-all"
+              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-1 break-all font-medium"
             >
               <span>{url}</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           ) : (
             <span className="text-[#161A1D]">Bối cảnh {targetBc?.ten || bcId}</span>
@@ -407,19 +408,24 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-xl p-5 sm:p-6 text-[#161A1D]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-[#F8F6F0] rounded-3xl border border-[#DED7C6] max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-xl p-5 sm:p-6 text-[#161A1D]"
+      >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3 mb-4">
+        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3.5 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#B93826]/10 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4 text-[#B93826]" />
             </div>
             <div>
               <h3 className="font-heritage-display text-base sm:text-lg font-bold">
                 Bảo Chứng Văn Hóa (Cultural Guardian)
               </h3>
-              <p className="text-xs text-[#6C7A87]">
+              <p className="text-xs text-[#4A5560]">
                 Thẩm định tính hài hoà và chuẩn mực văn hoá cho phương án phối đồ
               </p>
             </div>
@@ -427,20 +433,21 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#EFECE3] text-[#7A8691] hover:text-[#161A1D] cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 rounded-xl hover:bg-[#EFECE3] text-[#4A5560] hover:text-[#161A1D] flex items-center justify-center cursor-pointer transition-colors"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Status & Certainty Banner */}
-        <div className={`p-4 rounded-xl border ${badge.border} ${badge.bg} mb-4`}>
-          <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-            <div className="flex items-center gap-2">
-              <span className={`text-xs font-bold px-2 py-0.5 rounded border bg-white ${badge.border} ${badge.text}`}>
+        <div className={`p-4 rounded-2xl border ${badge.border} ${badge.bg} mb-4`}>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md border bg-white ${badge.border} ${badge.text}`}>
                 {badge.label}
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A]">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-white border border-[#DED7C6] text-[#1E3F5A]">
                 Mức chắc chắn: {getGuardianCertaintyLabel(result.do_chac_chan)}
               </span>
             </div>
@@ -452,21 +459,21 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
 
         {/* Color Harmony Score (only if not null) */}
         {result.diem_hai_hoa_mau !== null && (
-          <div className="p-3 rounded-xl bg-white border border-[#DED7C6] mb-3 flex items-center justify-between text-xs gap-2">
+          <div className="p-3.5 rounded-xl bg-white border border-[#DED7C6] mb-3.5 flex items-center justify-between text-xs gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="font-bold text-[#1E3F5A]">Điểm hài hoà màu:</span>
-              <span className="font-mono font-bold text-sm text-[#C88E1B] bg-[#FDF9F0] px-2 py-0.5 rounded border border-[#C88E1B]/30">
+              <span className="font-mono font-bold text-sm text-[#7C4D1B] bg-[#FDF9F0] px-2.5 py-0.5 rounded-md border border-[#C88E1B]/35">
                 {result.diem_hai_hoa_mau}/10
               </span>
             </div>
-            <span className="text-[11px] text-[#7A8691] italic">
+            <span className="text-xs text-[#4A5560] italic">
               điểm hài hoà màu mang tính tham khảo
             </span>
           </div>
         )}
 
         {/* Reasons (ly_do list) */}
-        <div className="space-y-2.5 mb-3">
+        <div className="space-y-2.5 mb-3.5">
           <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
             Lý do thẩm định ({result.ly_do.length}):
           </div>
@@ -476,16 +483,16 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
               className="p-3.5 rounded-xl bg-white border border-[#DED7C6] space-y-1.5 text-xs"
             >
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#6C7A87]">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] text-[#4A5560]">
                   {getGuardianLoaiLyDoLabel(item.loai)}
                 </span>
-                <span className="text-[10px] text-[#7A8691]">Mục 0{idx + 1}</span>
+                <span className="text-xs text-[#4A5560] font-mono">Mục 0{idx + 1}</span>
               </div>
-              <p className="text-[#3E4A56] leading-relaxed">
+              <p className="text-[#161A1D] leading-relaxed">
                 {item.noi_dung}
               </p>
-              <div className="pt-1 border-t border-[#F0EBE0] text-[11px] flex flex-wrap items-center gap-1.5">
-                <span className="font-semibold text-[#6C7A87]">Nguồn:</span>
+              <div className="pt-1.5 border-t border-[#F0EBE0] text-xs flex flex-wrap items-center gap-1.5">
+                <span className="font-semibold text-[#4A5560]">Nguồn:</span>
                 {renderSourceContent(item.ma_nguon)}
               </div>
             </div>
@@ -494,8 +501,8 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
 
         {/* Suggested adjustment (goi_y_sua) */}
         {result.goi_y_sua && result.goi_y_sua.length > 0 && (
-          <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/30 mb-4 text-xs space-y-1.5">
-            <div className="font-bold text-[#8B5A2B]">Gợi ý điều chỉnh:</div>
+          <div className="p-3.5 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/35 mb-4 text-xs space-y-1.5">
+            <div className="font-bold text-[#7C4D1B]">Gợi ý điều chỉnh:</div>
             <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
               {result.goi_y_sua.map((g, idx) => (
                 <li key={idx} className="leading-relaxed">
@@ -507,16 +514,16 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
         )}
 
         {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-[#DED7C6] flex justify-end">
+        <div className="mt-4 pt-3.5 border-t border-[#DED7C6] flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#1E3F5A] text-white text-xs font-semibold rounded-lg hover:bg-[#12283A] transition-colors cursor-pointer"
+            className="min-h-[44px] px-5 py-2 bg-[#1E3F5A] text-white text-xs font-semibold rounded-xl hover:bg-[#12283A] transition-colors cursor-pointer"
           >
             Đóng
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -532,18 +539,23 @@ const OptionGuardianErrorModal: React.FC<OptionGuardianErrorModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-md w-full shadow-xl p-5 sm:p-6 text-[#161A1D]">
-        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-[#F8F6F0] rounded-3xl border border-[#DED7C6] max-w-md w-full shadow-xl p-5 sm:p-6 text-[#161A1D]"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3.5 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#B93826]/10 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
               <AlertCircle className="w-4 h-4 text-[#B93826]" />
             </div>
             <div>
               <h3 className="font-heritage-display text-base font-bold text-[#8E2516]">
                 Chưa kiểm tra được
               </h3>
-              <p className="text-xs text-[#6C7A87]">
+              <p className="text-xs text-[#4A5560]">
                 Dịch vụ bảo chứng Cultural Guardian
               </p>
             </div>
@@ -551,22 +563,23 @@ const OptionGuardianErrorModal: React.FC<OptionGuardianErrorModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#EFECE3] text-[#7A8691] hover:text-[#161A1D] cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 rounded-xl hover:bg-[#EFECE3] text-[#4A5560] hover:text-[#161A1D] flex items-center justify-center cursor-pointer transition-colors"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-white border border-[#DED7C6] text-xs space-y-2 mb-4 text-[#4A5560]">
+        <div className="p-4 rounded-xl bg-white border border-[#DED7C6] text-xs space-y-2 mb-4 text-[#4A5560]">
           <p>
             Hệ thống chưa thể hoàn thành đối chiếu bảo chứng văn hoá tự động cho phương án này vào lúc này.
           </p>
-          <p className="text-[11px] text-[#7A8691]">
+          <p className="text-xs text-[#4A5560]">
             Vui lòng kiểm tra lại kết nối mạng hoặc thử lại. Các thông tin trích dẫn lịch sử từ KB-v3 vẫn giữ nguyên giá trị.
           </p>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#DED7C6]">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#DED7C6]">
           {onRetry && (
             <button
               type="button"
@@ -574,7 +587,7 @@ const OptionGuardianErrorModal: React.FC<OptionGuardianErrorModalProps> = ({
                 onClose();
                 onRetry();
               }}
-              className="px-3.5 py-1.5 bg-[#B93826] text-white text-xs font-semibold rounded-lg hover:bg-[#8E2516] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              className="min-h-[44px] px-4 py-2 bg-[#B93826] text-white text-xs font-semibold rounded-xl hover:bg-[#8E2516] transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Thử lại</span>
@@ -583,12 +596,12 @@ const OptionGuardianErrorModal: React.FC<OptionGuardianErrorModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-1.5 bg-white border border-[#DED7C6] text-[#4A5560] text-xs font-semibold rounded-lg hover:bg-[#FAF8F5] transition-colors cursor-pointer"
+            className="min-h-[44px] px-4 py-2 bg-white border border-[#DED7C6] text-[#4A5560] text-xs font-semibold rounded-xl hover:bg-[#FAF8F3] transition-colors cursor-pointer"
           >
             Đóng
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -632,18 +645,23 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
   onClose,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-xl p-5 sm:p-6 text-[#161A1D]">
-        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3 mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/50 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="bg-[#F8F6F0] rounded-3xl border border-[#DED7C6] max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-xl p-5 sm:p-6 text-[#161A1D]"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#DED7C6] pb-3.5 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#B93826]/10 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4 text-[#B93826]" />
             </div>
             <div>
               <h3 className="font-heritage-display text-base sm:text-lg font-bold">
                 Bảo Chứng Văn Hóa & Nguồn Tư Liệu
               </h3>
-              <p className="text-xs text-[#6C7A87]">
+              <p className="text-xs text-[#4A5560]">
                 Tiêu chuẩn minh bạch dữ liệu AI Arena Vietnam 2026
               </p>
             </div>
@@ -651,23 +669,24 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#EFECE3] text-[#7A8691] hover:text-[#161A1D] cursor-pointer"
+            className="min-w-[44px] min-h-[44px] -mr-2 -mt-1 rounded-xl hover:bg-[#EFECE3] text-[#4A5560] hover:text-[#161A1D] flex items-center justify-center cursor-pointer transition-colors"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Certainty level */}
-        <div className="bg-white rounded-xl p-4 border border-[#DED7C6] mb-4">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#7A8691]">
+        <div className="bg-white rounded-2xl p-4 border border-[#DED7C6] mb-4">
+          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#4A5560]">
               Trạng thái kiểm tra
             </span>
-            <span className="font-semibold text-xs text-[#1E3F5A] px-2 py-0.5 rounded bg-[#EBF2F7]">
+            <span className="font-semibold text-xs text-[#1E3F5A] px-2.5 py-0.5 rounded-md bg-[#EBF2F7] border border-[#1E3F5A]/20">
               {label}
             </span>
           </div>
-          <p className="text-xs text-[#52606D] mt-1 leading-relaxed">
+          <p className="text-xs text-[#4A5560] mt-1 leading-relaxed">
             {style.desc}
           </p>
         </div>
@@ -675,7 +694,7 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
         {/* Sources from KB */}
         {sources.length > 0 && (
           <div className="mb-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#7A8691] mb-2 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] mb-2 flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5" />
               Nguồn tư liệu đối chiếu ({sources.length})
             </h4>
@@ -683,21 +702,21 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
               {sources.map((src, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-xl p-3 border border-[#DED7C6]/70 text-xs"
+                  className="bg-white rounded-xl p-3.5 border border-[#DED7C6] text-xs"
                 >
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="font-bold text-[#1E3F5A]">[{src.code}]</span>
-                    <span className="text-[#7A8691] px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#E8E2D8]">
+                  <div className="flex items-center justify-between text-xs mb-1 gap-2 flex-wrap">
+                    <span className="font-mono font-bold text-[#1E3F5A]">[{src.code}]</span>
+                    <span className="text-[#4A5560] px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] font-semibold">
                       {src.loai}
                     </span>
                   </div>
-                  <div className="font-medium text-[#161A1D]">{src.ten}</div>
+                  <div className="font-semibold text-[#161A1D]">{src.ten}</div>
                   {src.url && (
                     <a
                       href={src.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-[#1E3F5A] hover:underline mt-1 inline-block truncate max-w-full"
+                      className="text-xs text-[#1E3F5A] hover:underline mt-1 inline-block truncate max-w-full"
                     >
                       {src.url}
                     </a>
@@ -711,9 +730,9 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
         {/* Warnings from khong_nen_khi_remix */}
         {warnings.length > 0 && (
           <div className="mb-4">
-            <div className="bg-[#FBEFEF] rounded-xl p-3.5 border border-[#B93826]/20">
-              <div className="text-xs font-semibold text-[#B93826] flex items-center gap-1.5 mb-2">
-                <AlertTriangle className="w-3.5 h-3.5" />
+            <div className="bg-[#FBEFEF] rounded-2xl p-3.5 border border-[#B93826]/30">
+              <div className="text-xs font-bold text-[#8E2516] flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-[#B93826]" />
                 Lưu ý khi phối đồ / cách tân
               </div>
               <ul className="text-xs space-y-1.5 text-[#78261A] list-disc list-inside">
@@ -729,15 +748,15 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
         {/* App suggestions disclaimer */}
         {suggestions.length > 0 && (
           <div className="mb-4">
-            <div className="bg-[#E9F2EE] rounded-xl p-3.5 border border-[#2E6254]/20">
-              <div className="text-xs font-semibold text-[#2E6254] flex items-center gap-1.5 mb-1.5">
+            <div className="bg-[#E9F2EE] rounded-2xl p-3.5 border border-[#2E6254]/30">
+              <div className="text-xs font-bold text-[#2E6254] flex items-center gap-1.5 mb-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Gợi ý phối đồ
               </div>
-              <div className="text-[10px] font-semibold text-[#8B5A2B] bg-[#FDF9F0] px-2 py-0.5 rounded border border-[#C88E1B]/30 inline-block mb-2">
+              <div className="text-xs font-semibold text-[#7C4D1B] bg-[#FDF9F0] px-2.5 py-0.5 rounded-md border border-[#C88E1B]/35 inline-block mb-2">
                 Gợi ý của app, không phải sự thật lịch sử
               </div>
-              <ul className="text-xs space-y-1 text-[#334D43] list-disc list-inside">
+              <ul className="text-xs space-y-1 text-[#21473C] list-disc list-inside">
                 {suggestions.map((s, idx) => (
                   <li key={idx} className="leading-snug">{s.noi_dung}</li>
                 ))}
@@ -746,16 +765,16 @@ const GuardianDetailModal: React.FC<GuardianDetailModalProps> = ({
           </div>
         )}
 
-        <div className="mt-5 pt-3 border-t border-[#DED7C6] flex justify-end">
+        <div className="mt-5 pt-3.5 border-t border-[#DED7C6] flex justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#1E3F5A] text-white text-xs font-medium rounded-lg hover:bg-[#12283A] transition-colors cursor-pointer"
+            className="min-h-[44px] px-5 py-2 bg-[#1E3F5A] text-white text-xs font-semibold rounded-xl hover:bg-[#12283A] transition-colors cursor-pointer"
           >
             Đóng
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

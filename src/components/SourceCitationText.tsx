@@ -21,7 +21,7 @@ export const SourceCitationText: React.FC<SourceCitationTextProps> = ({
   className = '',
 }) => {
   if (!text || text.trim() === '') {
-    return <span className="text-[#8E7E6B] italic">Chưa có nguồn</span>;
+    return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
   }
 
   // Replace phrases containing "Chưa có nguồn xác nhận" with "Chưa có nguồn"
@@ -43,7 +43,7 @@ export const SourceCitationText: React.FC<SourceCitationTextProps> = ({
     const codes = citationGroup.split(',').map((c) => c.trim()).filter(Boolean);
 
     parts.push(
-      <span key={`group-${match.index}`} className="inline-flex items-center gap-1 mx-1 align-baseline">
+      <span key={`group-${match.index}`} className="inline-flex flex-wrap items-center gap-1 mx-1 align-baseline">
         {codes.map((code) => {
           const sourceInfo = sourceMap[code];
           const chipTitle = sourceInfo
@@ -55,7 +55,7 @@ export const SourceCitationText: React.FC<SourceCitationTextProps> = ({
               <span
                 key={`chip-${code}-${match!.index}`}
                 title={chipTitle}
-                className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono font-semibold rounded bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25"
+                className="inline-flex items-center px-1.5 py-0.5 text-xs font-mono font-semibold rounded-md bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25"
               >
                 [{code}]
               </span>
@@ -71,7 +71,7 @@ export const SourceCitationText: React.FC<SourceCitationTextProps> = ({
                 onSelectSource(code);
               }}
               title={chipTitle}
-              className="inline-flex items-center px-1.5 py-0.2 text-[10px] font-mono font-semibold rounded bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25 hover:bg-[#1E3F5A] hover:text-white transition-colors cursor-pointer"
+              className="inline-flex items-center px-2 py-0.5 text-xs font-mono font-semibold rounded-md bg-[#EBF2F7] text-[#1E3F5A] border border-[#1E3F5A]/25 hover:bg-[#1E3F5A] hover:text-white transition-colors cursor-pointer"
             >
               [{code}]
             </button>

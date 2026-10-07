@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   ArrowLeft,
   Scale,
@@ -134,19 +135,25 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
     Array.isArray(outfit.phu_kien) && outfit.phu_kien.length > 0 ? outfit.phu_kien : [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 text-[#161A1D]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-black/55 backdrop-blur-xs">
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-[#F8F6F0] rounded-2xl border border-[#DED7C6] max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 text-[#161A1D]"
+      >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-[#DED7C6] pb-3 mb-4">
+        <div className="flex items-start justify-between gap-3 border-b border-[#DED7C6] pb-3.5 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#B93826]/10 flex items-center justify-center shrink-0">
               <ShoppingBag className="w-5 h-5 text-[#B93826]" />
             </div>
             <div>
               <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D]">
                 Tìm Nơi Thuê / Mua Trang Phục
               </h3>
-              <p className="text-xs text-[#6C7A87]">
+              <p className="text-xs text-[#4A5560]">
                 Trang phục:{' '}
                 <span title={getOutfitHoverNote(outfit)} className="font-semibold text-[#1E3F5A]">
                   {outfit.ten}
@@ -158,7 +165,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-[#EFECE3] text-[#7A8691] hover:text-[#161A1D] cursor-pointer transition-colors"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-xl hover:bg-[#EFECE3] text-[#4A5560] hover:text-[#161A1D] cursor-pointer transition-colors"
             title="Đóng"
           >
             <X className="w-5 h-5" />
@@ -175,10 +182,10 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
               <button
                 type="button"
                 onClick={() => setActionType('thue')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`min-h-[40px] px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   actionType === 'thue'
                     ? 'bg-[#B93826] text-white shadow-2xs'
-                    : 'text-[#52606D] hover:text-[#161A1D]'
+                    : 'text-[#4A5560] hover:text-[#161A1D]'
                 }`}
               >
                 Thuê
@@ -186,10 +193,10 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
               <button
                 type="button"
                 onClick={() => setActionType('mua')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`min-h-[40px] px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   actionType === 'mua'
                     ? 'bg-[#B93826] text-white shadow-2xs'
-                    : 'text-[#52606D] hover:text-[#161A1D]'
+                    : 'text-[#4A5560] hover:text-[#161A1D]'
                 }`}
               >
                 Mua
@@ -203,34 +210,34 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
               1. Nhập thành phố / tỉnh thành (Việt Nam)
             </label>
             <div className="relative">
-              <MapPin className="w-4 h-4 text-[#8A95A0] absolute left-3 top-1/2 -translate-y-1/2" />
+              <MapPin className="w-4 h-4 text-[#4A5560] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Ví dụ: Hà Nội, TP. Hồ Chí Minh, Huế, Đà Nẵng..."
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#DED7C6] bg-white text-xs text-[#161A1D] placeholder:text-[#9EA8B3] focus:outline-none focus:ring-2 focus:ring-[#B93826]/30 focus:border-[#B93826]"
+                className="w-full min-h-[44px] pl-9 pr-3 py-2.5 rounded-xl border border-[#DED7C6] bg-white text-xs text-[#161A1D] placeholder:text-[#6C7A87] focus:outline-none focus:ring-2 focus:ring-[#B93826]/30 focus:border-[#B93826]"
               />
             </div>
             {/* Quick chips chọn nhanh */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <span className="text-[11px] text-[#7A8691] py-0.5">Gợi ý nhanh:</span>
+              <span className="text-xs text-[#4A5560] py-0.5">Gợi ý nhanh:</span>
               {POPULAR_CITIES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setCity(c)}
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                  className={`min-h-[36px] px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                     cleanCity.toLowerCase() === c.toLowerCase()
                       ? 'bg-[#1E3F5A] text-white border-[#1E3F5A]'
-                      : 'bg-white text-[#52606D] border-[#DED7C6] hover:bg-[#FAF8F5]'
+                      : 'bg-white text-[#4A5560] border-[#DED7C6] hover:bg-[#FAF8F5] hover:text-[#161A1D]'
                   }`}
                 >
                   {c}
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-[#7A8691] italic">
+            <p className="text-xs text-[#4A5560] italic">
               * Người dùng tự gõ địa phương mong muốn; hệ thống không sử dụng định vị GPS và không lưu dữ liệu.
             </p>
           </div>
@@ -245,7 +252,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2.5 rounded-xl bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
               >
                 <MapPin className="w-4 h-4 shrink-0" />
                 <span>Search Google Maps</span>
@@ -256,7 +263,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                 href={googleUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2.5 rounded-xl bg-[#1E3F5A] hover:bg-[#12283A] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#1E3F5A] hover:bg-[#12283A] text-white text-xs font-semibold inline-flex items-center justify-center gap-2 transition-colors shadow-2xs text-center"
               >
                 <Search className="w-4 h-4 shrink-0" />
                 <span>Search Google</span>
@@ -265,7 +272,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
             </div>
 
             {/* Hiển thị từ khoá tìm kiếm của từng nút */}
-            <div className="space-y-1 bg-white p-2.5 rounded-lg border border-[#E8E2D8] font-mono text-[11px] text-[#6C7A87] break-all">
+            <div className="space-y-1 bg-white p-3 rounded-xl border border-[#DED7C6] font-mono text-xs text-[#4A5560] break-all">
               <div>
                 Maps: <span className="font-semibold text-[#161A1D]">"{mapsQuery}"</span>
               </div>
@@ -275,17 +282,17 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
             </div>
 
             {/* Mục (4): Khối Mẹo của app */}
-            <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#DED7C6] space-y-1.5 text-[11px]">
+            <div className="p-3.5 bg-[#FAF8F3] rounded-xl border border-[#DED7C6] space-y-1.5 text-xs">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="font-bold text-[#8B5A2B] flex items-center gap-1.5">
+                <span className="font-bold text-[#7C4D1B] flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-[#C88E1B]" />
                   <span>Mẹo của app</span>
                 </span>
-                <span className="text-[10px] text-[#8B5A2B] bg-white px-2 py-0.5 rounded border border-[#C88E1B]/30 font-semibold">
+                <span className="text-xs text-[#7C4D1B] bg-white px-2 py-0.5 rounded-md border border-[#C88E1B]/35 font-semibold">
                   Mẹo tìm kiếm, không phải thông tin văn hoá hay danh sách tiệm
                 </span>
               </div>
-              <p className="text-[#5A4630] leading-relaxed">
+              <p className="text-[#4E3B26] leading-relaxed">
                 Nếu Google Maps không ra kết quả (thường gặp ở trang phục ít phổ biến hoặc ở tỉnh nhỏ), bạn hãy thử nút <strong>"Search Google"</strong>, thử tìm ở thành phố lớn gần nhất, hoặc hỏi tiệm áo dài / cổ phục về đặt may.
               </p>
             </div>
@@ -298,19 +305,19 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                 <CheckSquare className="w-3.5 h-3.5 text-[#C88E1B]" />
                 <span>3. Checklist nên hỏi tiệm (từ tư liệu KB-v3)</span>
               </label>
-              <span className="text-[11px] text-[#7A8691]">Bấm để đánh dấu</span>
+              <span className="text-xs text-[#4A5560]">Bấm để đánh dấu</span>
             </div>
-            <p className="text-[11px] text-[#52606D]">
+            <p className="text-xs text-[#4A5560]">
               Đối chiếu kỹ cấu tạo, chất liệu và phụ kiện chuẩn xác khi kiểm tra trang phục tại tiệm:
             </p>
 
             {/* Cấu tạo cần có (từ dac_diem_nhan_dien_hinh_anh) */}
-            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
-              <div className="text-[11px] font-bold text-[#1E3F5A]">
+            <div className="p-3.5 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-xs font-bold text-[#1E3F5A]">
                 • Cấu tạo cần có (Đặc điểm nhận diện hình ảnh):
               </div>
               {dacDiemList.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {dacDiemList.map((item, idx) => {
                     const key = `dd_${idx}`;
                     const isChecked = Boolean(checkedItems[key]);
@@ -318,15 +325,15 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                       <label
                         key={key}
                         onClick={() => toggleCheck(key)}
-                        className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                        className="flex items-start gap-2.5 text-xs text-[#161A1D] cursor-pointer select-none py-0.5"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}}
-                          className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                          className="mt-0.5 w-4 h-4 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer shrink-0"
                         />
-                        <span className={isChecked ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                        <span className={isChecked ? 'line-through text-[#6C7A87]' : 'leading-relaxed'}>
                           {formatHuunhamText(item)}
                         </span>
                       </label>
@@ -334,42 +341,42 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                   })}
                 </div>
               ) : (
-                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+                <div className="text-xs text-[#4A5560] italic">Chưa có nguồn</div>
               )}
             </div>
 
             {/* Chất liệu (bo_phan.vat_lieu nếu có) */}
-            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
-              <div className="text-[11px] font-bold text-[#1E3F5A]">
+            <div className="p-3.5 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-xs font-bold text-[#1E3F5A]">
                 • Chất liệu:
               </div>
               {vatLieu ? (
                 <label
                   onClick={() => toggleCheck('vl_0')}
-                  className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                  className="flex items-start gap-2.5 text-xs text-[#161A1D] cursor-pointer select-none py-0.5"
                 >
                   <input
                     type="checkbox"
                     checked={Boolean(checkedItems['vl_0'])}
                     onChange={() => {}}
-                    className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                    className="mt-0.5 w-4 h-4 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer shrink-0"
                   />
-                  <span className={checkedItems['vl_0'] ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                  <span className={checkedItems['vl_0'] ? 'line-through text-[#6C7A87]' : 'leading-relaxed'}>
                     {formatHuunhamText(vatLieu)}
                   </span>
                 </label>
               ) : (
-                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+                <div className="text-xs text-[#4A5560] italic">Chưa có nguồn</div>
               )}
             </div>
 
             {/* Phụ kiện đi kèm (từ phu_kien) */}
-            <div className="p-3 bg-white rounded-xl border border-[#DED7C6] space-y-2">
-              <div className="text-[11px] font-bold text-[#1E3F5A]">
+            <div className="p-3.5 bg-white rounded-xl border border-[#DED7C6] space-y-2">
+              <div className="text-xs font-bold text-[#1E3F5A]">
                 • Phụ kiện đi kèm:
               </div>
               {phuKienList.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {phuKienList.map((item, idx) => {
                     const key = `pk_${idx}`;
                     const isChecked = Boolean(checkedItems[key]);
@@ -377,15 +384,15 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                       <label
                         key={key}
                         onClick={() => toggleCheck(key)}
-                        className="flex items-start gap-2.5 text-xs text-[#2C3843] cursor-pointer select-none hover:text-[#161A1D]"
+                        className="flex items-start gap-2.5 text-xs text-[#161A1D] cursor-pointer select-none py-0.5"
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}}
-                          className="mt-0.5 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer"
+                          className="mt-0.5 w-4 h-4 rounded border-[#C8BEAA] text-[#B93826] focus:ring-0 cursor-pointer shrink-0"
                         />
-                        <span className={isChecked ? 'line-through text-[#8A95A0]' : 'leading-relaxed'}>
+                        <span className={isChecked ? 'line-through text-[#6C7A87]' : 'leading-relaxed'}>
                           {formatHuunhamText(item)}
                         </span>
                       </label>
@@ -393,13 +400,13 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
                   })}
                 </div>
               ) : (
-                <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
+                <div className="text-xs text-[#4A5560] italic">Chưa có nguồn</div>
               )}
             </div>
           </div>
 
           {/* Minh bạch */}
-          <div className="p-2.5 rounded-lg bg-[#FAF8F5] border border-[#E8E2D8] text-[11px] text-[#6C7A87]">
+          <div className="p-3 rounded-xl bg-[#FAF8F3] border border-[#DED7C6] text-xs text-[#4A5560]">
             Hệ thống không tạo danh sách cửa hàng, không bịa tên tiệm, không gọi API ngoài hay lưu dữ liệu người dùng. Kết quả tìm kiếm mở trực tiếp trên Google Maps hoặc Google; app không biết kết quả có hay không và không lưu dữ liệu.
           </div>
         </div>
@@ -409,12 +416,12 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#1E3F5A] text-white text-xs font-medium rounded-lg hover:bg-[#12283A] transition-colors cursor-pointer"
+            className="min-h-[44px] px-5 py-2 bg-[#1E3F5A] text-white text-xs font-semibold rounded-xl hover:bg-[#12283A] transition-colors cursor-pointer"
           >
             Đóng bảng
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
@@ -691,7 +698,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     if (kbSrc) {
       return (
         <div key={code} className="inline-flex flex-wrap items-center gap-1.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
             [{code}]
           </span>
           {kbSrc.url ? (
@@ -702,12 +709,12 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               className="text-[#1E3F5A] font-medium hover:underline inline-flex items-center gap-1"
             >
               <span>{kbSrc.ten}</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           ) : (
             <span className="text-[#161A1D] font-medium">{kbSrc.ten}</span>
           )}
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#DED7C6] text-[#52606D] font-semibold">
+          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] text-[#4A5560] font-semibold">
             {getLoaiNguonLabel(kbSrc.loai)}
           </span>
         </div>
@@ -736,7 +743,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
       return (
         <div key={code} className="inline-flex flex-wrap items-center gap-1.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
             [{code}]
           </span>
           {url ? (
@@ -747,12 +754,12 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               className="text-[#1E3F5A] font-medium hover:underline inline-flex items-center gap-1"
             >
               <span>{domain}</span>
-              <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           ) : (
             <span className="text-[#161A1D] font-medium">{domain}</span>
           )}
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FDF9F0] border border-[#C88E1B]/30 text-[#8B5A2B] font-semibold">
+          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FDF9F0] border border-[#C88E1B]/35 text-[#7C4D1B] font-semibold">
             thông lệ/gợi ý
           </span>
         </div>
@@ -760,7 +767,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     }
 
     return (
-      <span key={code} className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-1.5 py-0.5 rounded border border-[#1E3F5A]/20">
+      <span key={code} className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
         [{code}]
       </span>
     );
@@ -769,7 +776,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const renderPhuongAnSource = (maNguon: string[] | string | null) => {
     const list = Array.isArray(maNguon) ? maNguon : maNguon ? [maNguon] : [];
     if (list.length === 0) {
-      return <span className="text-[#7A8691] italic">Chưa có nguồn</span>;
+      return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
     }
 
     return (
@@ -840,31 +847,33 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div className="space-y-6 pb-20 max-w-4xl mx-auto">
       {/* Top action bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <button
           type="button"
           onClick={onBackToCustomize}
-          className="text-xs font-medium text-[#52606D] hover:text-[#161A1D] flex items-center gap-1.5 cursor-pointer py-1"
+          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-white border border-[#DED7C6] hover:border-[#1E3F5A] text-xs font-semibold text-[#161A1D] hover:text-[#1E3F5A] flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Tùy biến lại</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Add to Compare */}
           <button
             type="button"
             onClick={() => onAddToCompare(outfit.id)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border ${
+            className={`min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border ${
               isInCompare
-                ? 'bg-[#EBF2F7] text-[#1E3F5A] border-[#1E3F5A]/30'
-                : 'bg-white text-[#4A5560] border-[#DED7C6] hover:border-[#1E3F5A]'
+                ? 'bg-[#EBF2F7] text-[#1E3F5A] border-[#1E3F5A]/35'
+                : 'bg-white text-[#4A5560] border-[#DED7C6] hover:border-[#1E3F5A] hover:text-[#161A1D]'
             }`}
           >
-            <Scale className="w-3.5 h-3.5" />
+            <Scale className="w-3.5 h-3.5 shrink-0" />
             <span>{isInCompare ? 'Đã thêm So sánh' : 'Thêm vào So sánh'}</span>
           </button>
 
@@ -872,13 +881,13 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           <button
             type="button"
             onClick={handleSaveLook}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer ${
               isSavedInLookbook
-                ? 'bg-[#E9F2EE] text-[#2E6254] border border-[#2E6254]/30'
-                : 'bg-[#B93826] hover:bg-[#8E2516] text-white shadow-2xs'
+                ? 'bg-[#E9F2EE] text-[#2E6254] border border-[#2E6254]/35'
+                : 'bg-[#B93826] hover:bg-[#8E2516] text-white shadow-xs'
             }`}
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-3.5 h-3.5 shrink-0" />
             <span>{isSavedInLookbook ? 'Đã lưu Lookbook' : 'Lưu vào Lookbook'}</span>
           </button>
 
@@ -887,10 +896,10 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
             <button
               type="button"
               onClick={() => onOpenImageGuardian(outfit.id)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border bg-[#1E3F5A] hover:bg-[#163046] text-white shadow-2xs"
+              className="min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border border-[#1E3F5A] bg-[#1E3F5A] hover:bg-[#12283A] text-white shadow-xs"
               title="Kiểm tra ảnh trang phục thực tế với Cultural Guardian"
             >
-              <Camera className="w-3.5 h-3.5" />
+              <Camera className="w-3.5 h-3.5 shrink-0" />
               <span>Kiểm tra ảnh</span>
             </button>
           )}
@@ -899,8 +908,9 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           <button
             type="button"
             onClick={handleShare}
-            className="p-1.5 rounded-lg border border-[#DED7C6] bg-white text-[#52606D] hover:text-[#161A1D] cursor-pointer"
+            className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl border border-[#DED7C6] bg-white text-[#4A5560] hover:text-[#161A1D] hover:border-[#1E3F5A] flex items-center justify-center cursor-pointer transition-colors"
             title="Sao chép liên kết"
+            aria-label="Sao chép liên kết"
           >
             {copiedLink ? <Check className="w-4 h-4 text-[#2E6254]" /> : <Share2 className="w-4 h-4" />}
           </button>
@@ -908,25 +918,32 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
       </div>
 
       {/* Main Result Card */}
-      <div className="bg-white rounded-3xl border border-[#DED7C6] overflow-hidden shadow-sm">
+      <div className="heritage-card rounded-3xl overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
           {/* Left Column: Always Vector SVG */}
-          <div className="md:col-span-5 bg-[#FAF8F5] relative flex flex-col justify-between overflow-hidden p-5 border-b md:border-b-0 md:border-r border-[#DED7C6]">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white text-[#1E3F5A] font-semibold border border-[#DED7C6]">
+          <div className="md:col-span-5 bg-[#FAF8F3] relative flex flex-col justify-between overflow-hidden p-5 border-b md:border-b-0 md:border-r border-[#DED7C6]">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white text-[#1E3F5A] font-semibold border border-[#DED7C6] shadow-2xs">
                 {levelName}
               </span>
-              <span className="text-[10px] text-[#7A8691] font-mono">
+              <span className="text-xs text-[#4A5560] font-mono">
                 Minh họa Line-art SVG
               </span>
             </div>
 
             {/* Always SVG Illustration */}
-            <div className="relative aspect-[3/4] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-white border border-[#E8E2D8] p-3">
-              <OutfitVectorIllustration id={outfit.id} size="lg" className="border-0 bg-transparent w-full h-full" />
+            <div className="relative aspect-[3/4] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-white border border-[#DED7C6] p-3 shadow-2xs">
+              <OutfitVectorIllustration
+                id={outfit.id}
+                size="lg"
+                className="border-0 bg-transparent w-full h-full"
+                colorSchemeId={customization.colorSchemeId}
+                selectedAccessoryIds={validSelectedAccessoryIds}
+                remixLevel={customization.remixLevel}
+              />
             </div>
 
-            <div className="mt-3 text-center text-[11px] text-[#7A8691]">
+            <div className="mt-3 text-center text-xs text-[#4A5560]">
               Minh họa vector trung tính line-art theo chuẩn KB-v3
             </div>
           </div>
@@ -934,25 +951,37 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           {/* Right Column: Detailed Breakdown */}
           <div className="md:col-span-7 p-5 sm:p-7 flex flex-col justify-between space-y-5">
             <div>
+              {/* Header Identity & Hierarchy */}
               <div>
-                <div className="flex items-center gap-2 text-xs text-[#7A8691] font-medium mb-1 flex-wrap">
-                  <span>{formatNguonText(outfit.thoi_ky)}</span>
+                <div className="flex items-center gap-2 text-xs text-[#4A5560] font-medium mb-1.5 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-md bg-[#FAF8F3] border border-[#DED7C6] text-[#1E3F5A] font-semibold">
+                    {formatNguonText(outfit.thoi_ky)}
+                  </span>
                   <span aria-hidden="true">·</span>
-                  <span>Bối cảnh: {boiCanh.ten}</span>
+                  <span>Bối cảnh: <strong className="text-[#161A1D]">{boiCanh.ten}</strong></span>
                 </div>
                 <h1
                   title={getOutfitHoverNote(outfit)}
-                  className="font-heritage-display text-2xl font-bold text-[#161A1D] leading-tight"
+                  className="font-heritage-display text-2xl sm:text-3xl font-bold text-[#161A1D] leading-tight"
                 >
                   {resultTitle}
                 </h1>
-                <p className="text-xs text-[#52606D] mt-1">
+                <p className="text-xs sm:text-sm text-[#4A5560] mt-1.5">
                   {resultSubtitle} · {formatWeatherSummary(customization.weather)}
                 </p>
               </div>
 
-              {/* Cultural Guardian Badge */}
-              <div className="mt-4">
+              {/* ĐIỂM NHẤN CHÍNH: Cultural Guardian Focal Panel */}
+              <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-[#F4F7FA] via-[#FAF8F3] to-[#F3EFE4] border-2 border-[#1E3F5A]/25 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#1E3F5A]" aria-hidden="true" />
+                    <span>Điểm nhấn thẩm định · Cultural Guardian (KB-v3)</span>
+                  </span>
+                  <span className="text-xs font-mono text-[#4A5560]">
+                    {outfit.nguon.length} nguồn tư liệu
+                  </span>
+                </div>
                 <GuardianBadge
                   label={
                     isLoadingStyle
@@ -969,444 +998,478 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               </div>
 
               {/* Detail Tabs */}
-              <div className="mt-5 border-b border-[#DED7C6] pb-1">
-                <div className="flex items-center gap-3 text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('styling')}
-                    className={`pb-1.5 cursor-pointer transition-colors ${
-                      activeTab === 'styling'
-                        ? 'text-[#1E3F5A] border-b-2 border-[#1E3F5A]'
-                        : 'text-[#7A8691] hover:text-[#161A1D]'
-                    }`}
-                  >
-                    Phương án Stylist & Bối cảnh
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('anatomy')}
-                    className={`pb-1.5 cursor-pointer transition-colors ${
-                      activeTab === 'anatomy'
-                        ? 'text-[#1E3F5A] border-b-2 border-[#1E3F5A]'
-                        : 'text-[#7A8691] hover:text-[#161A1D]'
-                    }`}
-                  >
-                    Đặc điểm cấu tạo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('history')}
-                    className={`pb-1.5 cursor-pointer transition-colors ${
-                      activeTab === 'history'
-                        ? 'text-[#1E3F5A] border-b-2 border-[#1E3F5A]'
-                        : 'text-[#7A8691] hover:text-[#161A1D]'
-                    }`}
-                  >
-                    Nguồn gốc & Lịch sử
-                  </button>
+              <div className="mt-6 border-b border-[#DED7C6]">
+                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto no-scrollbar">
+                  {[
+                    { id: 'styling' as const, label: 'Phương án Stylist & Bối cảnh' },
+                    { id: 'anatomy' as const, label: 'Đặc điểm cấu tạo' },
+                    { id: 'history' as const, label: 'Nguồn gốc & Lịch sử' },
+                  ].map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`relative min-h-[44px] px-3 py-2 text-xs font-bold cursor-pointer transition-colors whitespace-nowrap ${
+                          isActive
+                            ? 'text-[#1E3F5A]'
+                            : 'text-[#4A5560] hover:text-[#161A1D]'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        {isActive && (
+                          <motion.span
+                            layoutId="resultDetailTabLine"
+                            className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1E3F5A] rounded-full"
+                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Tab 1: Phương án Stylist & Bối cảnh */}
-              {activeTab === 'styling' && (
-                <div className="mt-4 space-y-4">
-                  {/* Banner Kiểm tra ảnh trang phục với Cultural Guardian */}
-                  {onOpenImageGuardian && (
-                    <div className="p-3.5 rounded-xl bg-[#EBF2F7] border border-[#1E3F5A]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-[#1E3F5A] text-white flex items-center justify-center shrink-0">
-                          <Camera className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-[#1E3F5A]">
-                            Kiểm tra ảnh thực tế với Cultural Guardian
-                          </div>
-                          <div className="text-[11px] text-[#4A5560]">
-                            Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn{' '}
-                            <span title={getOutfitHoverNote(outfit)} className="font-medium">
-                              {outfit.ten}
-                            </span>
-                            .
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onOpenImageGuardian(outfit.id)}
-                        className="px-3 py-1.5 bg-[#1E3F5A] hover:bg-[#163046] text-white text-xs font-medium rounded-lg transition-colors cursor-pointer shrink-0 self-start sm:self-center flex items-center gap-1.5"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>Kiểm tra ảnh ngay</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Khối Phương án phối đồ từ /api/style */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h2 className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-[#C88E1B]" />
-                        <span>Phương án phối đồ đề xuất</span>
-                      </h2>
-                      {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
-                        <span className="text-[11px] font-mono text-[#6C7A87]">
-                          {phuongAnList.length} phương án
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Skeleton khi chờ */}
-                    {isLoadingStyle && (
-                      <div className="space-y-3" aria-busy="true" aria-label="Đang tải phương án phối đồ">
-                        {[1, 2].map((skeletonIdx) => (
-                          <div
-                            key={skeletonIdx}
-                            className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#DED7C6] animate-pulse space-y-2.5"
-                          >
-                            <div className="h-4 w-2/5 bg-[#E6E0D2] rounded" />
-                            <div className="h-3 w-full bg-[#EFECE3] rounded" />
-                            <div className="h-3 w-4/5 bg-[#EFECE3] rounded" />
-                            <div className="flex gap-2 pt-1">
-                              <div className="h-5 w-20 bg-[#E6E0D2] rounded" />
-                              <div className="h-5 w-24 bg-[#E6E0D2] rounded" />
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeTab}
+                  initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {/* Tab 1: Phương án Stylist & Bối cảnh */}
+                  {activeTab === 'styling' && (
+                    <div className="mt-4 space-y-5">
+                      {/* Banner Kiểm tra ảnh trang phục với Cultural Guardian */}
+                      {onOpenImageGuardian && (
+                        <div className="p-4 rounded-2xl bg-[#EBF2F7] border border-[#1E3F5A]/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-[#1E3F5A] text-white flex items-center justify-center shrink-0">
+                              <Camera className="w-4 h-4" />
                             </div>
-                            <div className="h-10 w-full bg-[#EFECE3] rounded-xl mt-2" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Khi lỗi: hiện "Chưa kiểm tra được" kèm nút "Thử lại", không hiện nội dung dựng sẵn */}
-                    {!isLoadingStyle && styleError && (
-                      <div className="p-4 rounded-2xl bg-[#FBEFEF] border border-[#B93826]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start gap-2.5">
-                          <AlertCircle className="w-4 h-4 text-[#B93826] shrink-0 mt-0.5" />
-                          <div>
-                            <div className="text-xs font-bold text-[#8E2516]">
-                              {styleError}
-                            </div>
-                            {styleErrorReason && (
-                              <div className="text-[10px] font-mono text-[#8E2516]/80 mt-0.5">
-                                Mã lỗi: {styleErrorReason}
-                              </div>
-                            )}
-                            <p className="text-[11px] text-[#78261A] mt-0.5">
-                              Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn lấy trực tiếp từ KB-v3.
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRetryStyle}
-                          className="px-3.5 py-1.5 bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0 self-start sm:self-center"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          <span>Thử lại</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Khi thành công: hiện 2-3 thẻ phương án */}
-                    {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
-                      <div className="space-y-3.5">
-                        {phuongAnList.map((pa, idx) => (
-                          <div
-                            key={`${pa.token}-${idx}`}
-                            className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#DED7C6] space-y-3 text-xs shadow-2xs"
-                          >
-                            {/* Tên, Bảo chứng Cultural Guardian & Mô tả */}
                             <div>
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <h3 className="font-heritage-display text-sm sm:text-base font-bold text-[#161A1D]">
-                                  {idx + 1}. {pa.ten}
-                                </h3>
-                                <div className="flex items-center gap-2 shrink-0">
+                              <div className="text-xs font-bold text-[#1E3F5A]">
+                                Kiểm tra ảnh thực tế với Cultural Guardian
+                              </div>
+                              <div className="text-xs text-[#4A5560] mt-0.5">
+                                Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn{' '}
+                                <span title={getOutfitHoverNote(outfit)} className="font-semibold text-[#161A1D]">
+                                  {outfit.ten}
+                                </span>
+                                .
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onOpenImageGuardian(outfit.id)}
+                            className="min-h-[44px] px-3.5 py-2 bg-[#1E3F5A] hover:bg-[#12283A] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shrink-0 self-start sm:self-center flex items-center gap-1.5"
+                          >
+                            <Camera className="w-3.5 h-3.5" />
+                            <span>Kiểm tra ảnh ngay</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Khối Phương án phối đồ từ /api/style */}
+                      <div className="space-y-3.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <h2 className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-[#C88E1B]" />
+                            <span>Phương án phối đồ đề xuất</span>
+                          </h2>
+                          {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
+                            <span className="text-xs font-mono text-[#4A5560] bg-[#FAF8F3] px-2.5 py-0.5 rounded-md border border-[#DED7C6]">
+                              {phuongAnList.length} phương án
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Skeleton dạng khung xương chi tiết khi chờ */}
+                        {isLoadingStyle && (
+                          <div className="space-y-4" aria-busy="true" aria-label="Đang tải phương án phối đồ">
+                            {[1, 2].map((skeletonIdx) => (
+                              <div
+                                key={skeletonIdx}
+                                className="p-4 sm:p-5 rounded-2xl bg-[#FAF8F3] border border-[#DED7C6] space-y-3.5"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="h-5 w-1/2 heritage-skeleton rounded-lg" />
+                                  <div className="h-6 w-28 heritage-skeleton rounded-full" />
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="h-3.5 w-full heritage-skeleton rounded" />
+                                  <div className="h-3.5 w-4/5 heritage-skeleton rounded" />
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                  <div className="h-6 w-24 heritage-skeleton rounded-lg" />
+                                  <div className="h-6 w-28 heritage-skeleton rounded-lg" />
+                                  <div className="h-6 w-20 heritage-skeleton rounded-lg" />
+                                </div>
+                                <div className="p-3 rounded-xl bg-white border border-[#E8E2D8] space-y-2">
+                                  <div className="h-3.5 w-1/3 heritage-skeleton rounded" />
+                                  <div className="h-3 w-full heritage-skeleton rounded" />
+                                  <div className="h-3 w-2/3 heritage-skeleton rounded" />
+                                </div>
+                                <div className="h-12 w-full heritage-skeleton rounded-xl" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Khi lỗi: hiện "Chưa kiểm tra được" kèm nút "Thử lại", không hiện nội dung dựng sẵn */}
+                        {!isLoadingStyle && styleError && (
+                          <div className="p-4 rounded-2xl bg-[#FBEFEF] border border-[#B93826]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-2.5">
+                              <AlertCircle className="w-4 h-4 text-[#B93826] shrink-0 mt-0.5" />
+                              <div>
+                                <div className="text-xs font-bold text-[#8E2516]">
+                                  {styleError}
+                                </div>
+                                {styleErrorReason && (
+                                  <div className="text-xs font-mono text-[#8E2516] mt-0.5">
+                                    Mã lỗi: {styleErrorReason}
+                                  </div>
+                                )}
+                                <p className="text-xs text-[#78261A] mt-1 leading-relaxed">
+                                  Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn lấy trực tiếp từ KB-v3.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleRetryStyle}
+                              className="min-h-[44px] px-4 py-2 bg-[#B93826] hover:bg-[#8E2516] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0 self-start sm:self-center"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Thử lại</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Khi thành công: hiện 2-3 thẻ phương án xuất hiện lần lượt */}
+                        {!isLoadingStyle && !styleError && phuongAnList.length > 0 && (
+                          <div className="space-y-4">
+                            {phuongAnList.map((pa, idx) => (
+                              <motion.div
+                                key={`${pa.token}-${idx}`}
+                                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{
+                                  duration: shouldReduceMotion ? 0 : 0.24,
+                                  delay: shouldReduceMotion ? 0 : idx * 0.08,
+                                  ease: [0.22, 1, 0.36, 1],
+                                }}
+                                className="p-4 sm:p-5 rounded-2xl bg-[#FAF8F3] border border-[#DED7C6] space-y-3.5 text-xs shadow-2xs"
+                              >
+                                {/* Tên & Mô tả */}
+                                <div className="flex items-start justify-between gap-2 flex-wrap">
+                                  <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D]">
+                                    {idx + 1}. {pa.ten}
+                                  </h3>
+                                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-md bg-white border border-[#DED7C6] text-[#1E3F5A] font-semibold shrink-0">
+                                    Phương án 0{idx + 1}
+                                  </span>
+                                </div>
+
+                                {/* Điểm nhấn kết quả thẩm định Cultural Guardian của phương án */}
+                                <div className="p-3 rounded-xl bg-white border-2 border-[#1E3F5A]/20 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                                  <span className="text-xs font-bold text-[#1E3F5A]">
+                                    Kết quả thẩm định Cultural Guardian:
+                                  </span>
                                   <GuardianBadge
                                     evaluation={guardianStates[pa.token] || { status: 'loading' }}
                                     onRetry={() => evaluateOptionGuardian(pa, true)}
                                   />
-                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#DED7C6] text-[#1E3F5A] shrink-0">
-                                    Phương án 0{idx + 1}
-                                  </span>
                                 </div>
-                              </div>
-                              <p className="text-[#4A5560] leading-relaxed mt-1.5">
-                                {pa.mo_ta}
-                              </p>
-                            </div>
 
-                            {/* Thành phần (thanh_phan) */}
-                            <div>
-                              <div className="text-[11px] font-bold text-[#1E3F5A] mb-1">
-                                Thành phần bản phối:
-                              </div>
-                              <div className="flex flex-wrap gap-1.5">
-                                {pa.thanh_phan.map((tp, tpIdx) => (
-                                  <span
-                                    key={tpIdx}
-                                    className="px-2.5 py-1 rounded-lg bg-white border border-[#DED7C6] text-[#161A1D] font-medium"
-                                  >
-                                    {tp}
+                                <p className="text-[#4A5560] leading-relaxed">
+                                  {pa.mo_ta}
+                                </p>
+
+                                {/* Thành phần (thanh_phan) */}
+                                <div>
+                                  <div className="text-xs font-bold text-[#1E3F5A] mb-1.5">
+                                    Thành phần bản phối:
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {pa.thanh_phan.map((tp, tpIdx) => (
+                                      <span
+                                        key={tpIdx}
+                                        className="px-2.5 py-1 rounded-lg bg-white border border-[#DED7C6] text-[#161A1D] font-medium"
+                                      >
+                                        {tp}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Lý do văn hoá (ly_do_van_hoa) & Nguồn (ma_nguon) */}
+                                <div className="p-3.5 rounded-xl bg-white border border-[#DED7C6] space-y-2">
+                                  <div className="text-xs font-bold text-[#1E3F5A]">
+                                    Lý do văn hoá & Bối cảnh:
+                                  </div>
+                                  <p className="text-[#4A5560] leading-relaxed">
+                                    {pa.ly_do_van_hoa}
+                                  </p>
+                                  <div className="pt-2 border-t border-[#EFECE3] flex flex-wrap items-center gap-1.5 text-xs">
+                                    <span className="font-semibold text-[#4A5560]">Nguồn:</span>
+                                    {renderPhuongAnSource(pa.ma_nguon)}
+                                  </div>
+                                </div>
+
+                                {/* Khối "Gợi ý của app" (goi_y_cua_app) */}
+                                <div className="p-3.5 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/35 space-y-2">
+                                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <span className="text-xs font-bold text-[#7C4D1B]">
+                                      Gợi ý của app
+                                    </span>
+                                    <span className="text-xs font-semibold text-[#7C4D1B] bg-white px-2.5 py-0.5 rounded-md border border-[#C88E1B]/35">
+                                      Gợi ý của app, không phải sự thật lịch sử
+                                    </span>
+                                  </div>
+                                  <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
+                                    {pa.goi_y_cua_app.map((line, lIdx) => (
+                                      <li key={lIdx} className="leading-relaxed">
+                                        {line}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                {/* Nút Tìm nơi thuê/mua trên mỗi thẻ phương án (B6b) */}
+                                <div className="pt-2.5 border-t border-[#E8E2D8] flex items-center justify-between gap-2 flex-wrap">
+                                  <span className="text-xs text-[#4A5560]">
+                                    Trải nghiệm thực tế phương án này:
                                   </span>
-                                ))}
-                              </div>
-                            </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRentalModalPa(pa)}
+                                    className="min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-[#FAF8F3] border border-[#DED7C6] hover:border-[#1E3F5A] text-[#1E3F5A] text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                                  >
+                                    <MapPin className="w-3.5 h-3.5 text-[#B93826]" />
+                                    <span>Tìm nơi thuê/mua</span>
+                                  </button>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
 
-                            {/* Lý do văn hoá (ly_do_van_hoa) & Nguồn (ma_nguon) */}
-                            <div className="p-3 rounded-xl bg-white border border-[#E8E2D8] space-y-1.5">
-                              <div className="text-[11px] font-bold text-[#1E3F5A]">
-                                Lý do văn hoá & Bối cảnh:
+                      {/* Đánh giá bối cảnh tĩnh từ boi-canh.json */}
+                      <div className="pt-4 border-t border-[#DED7C6] space-y-2.5">
+                        <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
+                          Thông tin bối cảnh từ dữ liệu (boi-canh.json)
+                        </div>
+                        {priorityRecommendation ? (
+                          <div className="p-3.5 rounded-xl bg-[#FAF8F3] border border-[#DED7C6] text-xs space-y-1.5">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="font-bold text-[#1E3F5A] flex items-center gap-1.5">
+                                <Info className="w-4 h-4 shrink-0" />
+                                <span>Gợi ý của app cho bối cảnh này</span>
                               </div>
-                              <p className="text-[#4A5560] leading-relaxed">
-                                {pa.ly_do_van_hoa}
-                              </p>
-                              <div className="pt-1.5 border-t border-[#F0EBE0] flex flex-wrap items-center gap-1.5 text-[11px]">
-                                <span className="font-semibold text-[#52606D]">Nguồn:</span>
-                                {renderPhuongAnSource(pa.ma_nguon)}
-                              </div>
+                              <span className="text-xs text-[#4A5560] italic">chưa có nguồn</span>
                             </div>
+                            <p className="text-[#4A5560] leading-relaxed">{priorityRecommendation.ly_do}</p>
+                          </div>
+                        ) : (
+                          <div className="p-3.5 rounded-xl bg-[#FAF8F3] border border-[#DED7C6] text-xs text-[#4A5560] flex items-center gap-2">
+                            <Info className="w-4 h-4 text-[#4A5560] shrink-0" />
+                            <span>Chưa có khuyến nghị cho trang phục này trong dữ liệu bối cảnh</span>
+                          </div>
+                        )}
 
-                            {/* Khối "Gợi ý của app" (goi_y_cua_app) */}
-                            <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/30 space-y-1.5">
-                              <div className="flex items-center justify-between gap-2 flex-wrap">
-                                <span className="text-[11px] font-bold text-[#8B5A2B]">
-                                  Gợi ý của app
-                                </span>
-                                <span className="text-[10px] font-semibold text-[#8B5A2B] bg-white px-2 py-0.5 rounded border border-[#C88E1B]/30">
-                                  Gợi ý của app, không phải sự thật lịch sử
-                                </span>
-                              </div>
-                              <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
-                                {pa.goi_y_cua_app.map((line, lIdx) => (
-                                  <li key={lIdx} className="leading-relaxed">
-                                    {line}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            {/* Nút Tìm nơi thuê/mua trên mỗi thẻ phương án (B6b) */}
-                            <div className="pt-2 border-t border-[#EFECE3] flex items-center justify-between gap-2 flex-wrap">
-                              <span className="text-[11px] text-[#6C7A87]">
-                                Trải nghiệm thực tế phương án này:
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setRentalModalPa(pa)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#FAF8F5] border border-[#DED7C6] text-[#1E3F5A] text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                        {/* Lưu ý của bối cảnh */}
+                        {boiCanh.luu_y.map((item, idx) => {
+                          const loaiLabel =
+                            item.loai === 'thong_le_ung_xu'
+                              ? 'Thông lệ, không phải quy định'
+                              : 'Gợi ý thẩm mỹ';
+                          const citedUrls = resolveCitedSources(item.nguon_chi_so, boiCanh.nguon);
+                          return (
+                            <div key={idx} className="p-3.5 rounded-xl bg-[#FAF8F3] border border-[#DED7C6] text-xs space-y-1.5">
+                              <span
+                                className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-md border ${
+                                  item.loai === 'thong_le_ung_xu'
+                                    ? 'bg-[#EBF2F7] text-[#1E3F5A] border-[#1E3F5A]/25'
+                                    : 'bg-[#FDF9F0] text-[#7C4D1B] border-[#C88E1B]/35'
+                                }`}
                               >
-                                <MapPin className="w-3.5 h-3.5 text-[#B93826]" />
-                                <span>Tìm nơi thuê/mua</span>
-                              </button>
+                                {loaiLabel}
+                              </span>
+                              <p className="text-[#161A1D] leading-relaxed">{item.noi_dung}</p>
+                              <div className="text-xs text-[#4A5560] flex flex-wrap items-center gap-1.5">
+                                <span className="font-semibold">Nguồn:</span>
+                                {citedUrls.length > 0 ? (
+                                  citedUrls.map((url, uIdx) => (
+                                    <a
+                                      key={uIdx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[#1E3F5A] hover:underline break-all"
+                                    >
+                                      <span>{url}</span>
+                                      <ExternalLink className="w-3 h-3 shrink-0" />
+                                    </a>
+                                  ))
+                                ) : (
+                                  <span>Chưa có nguồn</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Đánh giá bối cảnh tĩnh từ boi-canh.json */}
-                  <div className="pt-3 border-t border-[#DED7C6] space-y-2.5">
-                    <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
-                      Thông tin bối cảnh từ dữ liệu (boi-canh.json)
-                    </div>
-                    {priorityRecommendation ? (
-                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#DED7C6] text-xs space-y-1">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <div className="font-bold text-[#1E3F5A] flex items-center gap-1.5">
-                            <Info className="w-4 h-4 shrink-0" />
-                            <span>Gợi ý của app cho bối cảnh này</span>
-                          </div>
-                          <span className="text-[10px] text-[#7A8691] italic">chưa có nguồn</span>
+                      <div className="pt-3 border-t border-[#DED7C6]/70">
+                        <div className="text-xs font-semibold text-[#7C4D1B] bg-[#FDF9F0] px-2.5 py-1 rounded-md border border-[#C88E1B]/35 inline-block mb-2.5">
+                          Gợi ý của app, không phải sự thật lịch sử
                         </div>
-                        <p className="text-[#4A5560] leading-relaxed">{priorityRecommendation.ly_do}</p>
-                      </div>
-                    ) : (
-                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#DED7C6] text-xs text-[#52606D] flex items-center gap-2">
-                        <Info className="w-4 h-4 text-[#7A8691] shrink-0" />
-                        <span>Chưa có khuyến nghị cho trang phục này trong dữ liệu bối cảnh</span>
-                      </div>
-                    )}
 
-                    {/* Lưu ý của bối cảnh */}
-                    {boiCanh.luu_y.map((item, idx) => {
-                      const loaiLabel =
-                        item.loai === 'thong_le_ung_xu'
-                          ? 'Thông lệ, không phải quy định'
-                          : 'Gợi ý thẩm mỹ';
-                      const citedUrls = resolveCitedSources(item.nguon_chi_so, boiCanh.nguon);
-                      return (
-                        <div key={idx} className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E8E2D8] text-xs space-y-1.5">
-                          <span
-                            className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                              item.loai === 'thong_le_ung_xu'
-                                ? 'bg-[#EBF2F7] text-[#1E3F5A] border-[#1E3F5A]/25'
-                                : 'bg-[#FDF9F0] text-[#8B5A2B] border-[#C88E1B]/30'
-                            }`}
-                          >
-                            {loaiLabel}
+                        {outfit.goi_y_phoi_do.length === 0 ? (
+                          <div className="text-xs text-[#4A5560] italic">Chưa có nguồn</div>
+                        ) : (
+                          <div className="space-y-2 text-xs">
+                            {outfit.goi_y_phoi_do.map((item, idx) => (
+                              <div key={idx} className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#DED7C6]">
+                                <p className="text-[#161A1D] leading-relaxed">{item.noi_dung}</p>
+                                {item.ghi_chu && (
+                                  <p className="text-xs text-[#4A5560] mt-1 italic">{item.ghi_chu}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Phụ kiện đã chọn */}
+                      {selectedAccessories.length > 0 && (
+                        <div className="pt-2">
+                          <div className="text-xs font-bold text-[#1E3F5A] mb-2">
+                            Phụ kiện đã chọn ({selectedAccessories.length}):
+                          </div>
+                          <div className="space-y-1.5">
+                            {selectedAccessories.map((acc) => (
+                              <div
+                                key={acc.id}
+                                className="p-2.5 rounded-xl bg-white border border-[#DED7C6] text-xs flex items-center justify-between gap-2 flex-wrap"
+                              >
+                                <span className="text-[#161A1D] font-semibold">{acc.name}</span>
+                                <span className="text-xs text-[#4A5560] shrink-0">
+                                  {acc.isAppSuggestion
+                                    ? 'Gợi ý của app, không phải sự thật lịch sử'
+                                    : 'Tư liệu KB-v3'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tab 2: Đặc điểm cấu tạo */}
+                  {activeTab === 'anatomy' && (
+                    <div className="mt-4 space-y-3.5 text-xs">
+                      <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#DED7C6] space-y-3">
+                        <div>
+                          <span className="font-bold text-[#1E3F5A] block mb-1">Cổ áo:</span>
+                          <SourceCitationText text={outfit.bo_phan.co || 'Chưa có nguồn'} />
+                        </div>
+                        <div className="pt-2.5 border-t border-[#E8E2D8]">
+                          <span className="font-bold text-[#1E3F5A] block mb-1">Tay áo:</span>
+                          <SourceCitationText text={outfit.bo_phan.tay || 'Chưa có nguồn'} />
+                        </div>
+                        <div className="pt-2.5 border-t border-[#E8E2D8]">
+                          <span className="font-bold text-[#1E3F5A] block mb-1">Thân áo & Vạt áo:</span>
+                          <SourceCitationText text={outfit.bo_phan.than || 'Chưa có nguồn'} />
+                        </div>
+                        {outfit.bo_phan.vat_lieu && (
+                          <div className="pt-2.5 border-t border-[#E8E2D8]">
+                            <span className="font-bold text-[#1E3F5A] block mb-1">Vật liệu:</span>
+                            <SourceCitationText text={outfit.bo_phan.vat_lieu} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Đặc điểm nhận diện hình ảnh */}
+                      {outfit.dac_diem_nhan_dien_hinh_anh.length > 0 && (
+                        <div className="p-4 rounded-2xl bg-white border border-[#DED7C6]">
+                          <span className="font-bold text-[#1E3F5A] block mb-2">
+                            Đặc điểm nhận diện hình ảnh:
                           </span>
-                          <p className="text-[#161A1D] leading-relaxed">{item.noi_dung}</p>
-                          <div className="text-[10px] text-[#6C7A87] flex flex-wrap items-center gap-1.5">
-                            <span>Nguồn:</span>
-                            {citedUrls.length > 0 ? (
-                              citedUrls.map((url, uIdx) => (
-                                <a
-                                  key={uIdx}
-                                  href={url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-0.5 text-[#1E3F5A] hover:underline break-all"
-                                >
-                                  <span>{url}</span>
-                                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
-                                </a>
-                              ))
-                            ) : (
-                              <span>Chưa có nguồn</span>
-                            )}
-                          </div>
+                          <ul className="space-y-1.5 list-disc list-inside text-[#4A5560]">
+                            {outfit.dac_diem_nhan_dien_hinh_anh.map((item, idx) => (
+                              <li key={idx}>
+                                <SourceCitationText text={item} />
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="pt-2 border-t border-[#DED7C6]/60">
-                    <div className="text-[11px] font-semibold text-[#8B5A2B] bg-[#FDF9F0] px-2.5 py-1 rounded border border-[#C88E1B]/30 inline-block mb-2">
-                      Gợi ý của app, không phải sự thật lịch sử
-                    </div>
-
-                    {outfit.goi_y_phoi_do.length === 0 ? (
-                      <div className="text-xs text-[#7A8691] italic">Chưa có nguồn</div>
-                    ) : (
-                      <div className="space-y-2 text-xs">
-                        {outfit.goi_y_phoi_do.map((item, idx) => (
-                          <div key={idx} className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E8E2D8]">
-                            <p className="text-[#161A1D] leading-relaxed">{item.noi_dung}</p>
-                            {item.ghi_chu && (
-                              <p className="text-[11px] text-[#7A8691] mt-1 italic">{item.ghi_chu}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phụ kiện đã chọn */}
-                  {selectedAccessories.length > 0 && (
-                    <div className="pt-2">
-                      <div className="text-xs font-bold text-[#1E3F5A] mb-1.5">
-                        Phụ kiện đã chọn ({selectedAccessories.length}):
-                      </div>
-                      <div className="space-y-1.5">
-                        {selectedAccessories.map((acc) => (
-                          <div
-                            key={acc.id}
-                            className="p-2 rounded-lg bg-white border border-[#DED7C6] text-xs flex items-center justify-between gap-2"
-                          >
-                            <span className="text-[#161A1D] font-medium">{acc.name}</span>
-                            <span className="text-[10px] text-[#7A8691] shrink-0">
-                              {acc.isAppSuggestion
-                                ? 'Gợi ý của app, không phải sự thật lịch sử'
-                                : 'Tư liệu KB-v3'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab 2: Đặc điểm cấu tạo */}
-              {activeTab === 'anatomy' && (
-                <div className="mt-4 space-y-3 text-xs">
-                  <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E8E2D8] space-y-2">
-                    <div>
-                      <span className="font-bold text-[#1E3F5A] block mb-0.5">Cổ áo:</span>
-                      <SourceCitationText text={outfit.bo_phan.co || 'Chưa có nguồn'} />
-                    </div>
-                    <div className="pt-2 border-t border-[#E8E2D8]">
-                      <span className="font-bold text-[#1E3F5A] block mb-0.5">Tay áo:</span>
-                      <SourceCitationText text={outfit.bo_phan.tay || 'Chưa có nguồn'} />
-                    </div>
-                    <div className="pt-2 border-t border-[#E8E2D8]">
-                      <span className="font-bold text-[#1E3F5A] block mb-0.5">Thân áo & Vạt áo:</span>
-                      <SourceCitationText text={outfit.bo_phan.than || 'Chưa có nguồn'} />
-                    </div>
-                    {outfit.bo_phan.vat_lieu && (
-                      <div className="pt-2 border-t border-[#E8E2D8]">
-                        <span className="font-bold text-[#1E3F5A] block mb-0.5">Vật liệu:</span>
-                        <SourceCitationText text={outfit.bo_phan.vat_lieu} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Đặc điểm nhận diện hình ảnh */}
-                  {outfit.dac_diem_nhan_dien_hinh_anh.length > 0 && (
-                    <div className="p-3 rounded-xl bg-white border border-[#DED7C6]">
-                      <span className="font-bold text-[#1E3F5A] block mb-1.5">
-                        Đặc điểm nhận diện hình ảnh:
-                      </span>
-                      <ul className="space-y-1 list-disc list-inside text-[#4A5560]">
-                        {outfit.dac_diem_nhan_dien_hinh_anh.map((item, idx) => (
-                          <li key={idx}>
-                            <SourceCitationText text={item} />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab 3: Nguồn gốc & Lịch sử */}
-              {activeTab === 'history' && (
-                <div className="mt-4 space-y-3 text-xs">
-                  <div className="p-3 rounded-xl bg-[#FAF7F2] border border-[#E8E2D8]">
-                    <span className="font-bold text-[#1E3F5A] block mb-0.5">Thời kỳ lịch sử:</span>
-                    <SourceCitationText text={outfit.thoi_ky} />
-                  </div>
-
-                  {outfit.boi_canh_su_dung && outfit.boi_canh_su_dung.length > 0 && (
-                    <div className="p-3 rounded-xl bg-white border border-[#DED7C6]">
-                      <span className="font-bold text-[#1E3F5A] block mb-1">Bối cảnh sử dụng:</span>
-                      <ul className="space-y-1 list-disc list-inside text-[#4A5560]">
-                        {outfit.boi_canh_su_dung.map((b, idx) => (
-                          <li key={idx}>
-                            <SourceCitationText text={b} />
-                          </li>
-                        ))}
-                      </ul>
+                      )}
                     </div>
                   )}
 
-                  {/* Danh sách nguồn tư liệu */}
-                  <div className="p-3 rounded-xl bg-white border border-[#DED7C6]">
-                    <span className="font-bold text-[#1E3F5A] block mb-1.5">
-                      Nguồn đối chiếu ({outfit.nguon.length}):
-                    </span>
-                    <div className="space-y-1.5">
-                      {sourceDetails.map((src) => (
-                        <div key={src.code} className="flex items-center justify-between text-[11px] pb-1 border-b border-[#F0EBE0] last:border-b-0">
-                          <div>
-                            <span className="font-bold text-[#1E3F5A] mr-1.5">[{src.code}]</span>
-                            <span className="text-[#161A1D]">{src.ten}</span>
-                          </div>
-                          <span className="text-[10px] text-[#7A8691] px-1.5 py-0.2 rounded bg-[#FAF7F2] border border-[#E8E2D8]">
-                            {src.loai}
-                          </span>
+                  {/* Tab 3: Nguồn gốc & Lịch sử */}
+                  {activeTab === 'history' && (
+                    <div className="mt-4 space-y-3.5 text-xs">
+                      <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#DED7C6]">
+                        <span className="font-bold text-[#1E3F5A] block mb-1">Thời kỳ lịch sử:</span>
+                        <SourceCitationText text={outfit.thoi_ky} />
+                      </div>
+
+                      {outfit.boi_canh_su_dung && outfit.boi_canh_su_dung.length > 0 && (
+                        <div className="p-4 rounded-2xl bg-white border border-[#DED7C6]">
+                          <span className="font-bold text-[#1E3F5A] block mb-1.5">Bối cảnh sử dụng:</span>
+                          <ul className="space-y-1.5 list-disc list-inside text-[#4A5560]">
+                            {outfit.boi_canh_su_dung.map((b, idx) => (
+                              <li key={idx}>
+                                <SourceCitationText text={b} />
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                      ))}
+                      )}
+
+                      {/* Danh sách nguồn tư liệu */}
+                      <div className="p-4 rounded-2xl bg-white border border-[#DED7C6]">
+                        <span className="font-bold text-[#1E3F5A] block mb-2">
+                          Nguồn đối chiếu ({outfit.nguon.length}):
+                        </span>
+                        <div className="space-y-2">
+                          {sourceDetails.map((src) => (
+                            <div key={src.code} className="flex items-center justify-between gap-2 text-xs pb-2 border-b border-[#F0EBE0] last:border-b-0 flex-wrap">
+                              <div>
+                                <span className="font-mono font-bold text-[#1E3F5A] mr-1.5">[{src.code}]</span>
+                                <span className="text-[#161A1D] font-medium">{src.ten}</span>
+                              </div>
+                              <span className="text-xs text-[#4A5560] px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] font-semibold">
+                                {src.loai}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Bottom Color Scheme Note */}
-            <div className="pt-3 border-t border-[#DED7C6]/60 flex items-center justify-between text-xs text-[#7A8691]">
-              <span>Màu sắc: <strong>{colorScheme.name}</strong></span>
+            <div className="pt-3.5 border-t border-[#DED7C6]/70 flex items-center justify-between gap-2 flex-wrap text-xs text-[#4A5560]">
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="w-3 h-3 rounded-full border border-black/15 shrink-0"
+                  style={{ backgroundColor: colorScheme.primaryHex }}
+                  aria-hidden="true"
+                />
+                <span>Màu sắc: <strong className="text-[#161A1D]">{colorScheme.name}</strong></span>
+              </span>
               <span>{colorScheme.note}</span>
             </div>
           </div>

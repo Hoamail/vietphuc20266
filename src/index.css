@@ -2,26 +2,139 @@
 
 @layer base {
   :root {
-    --font-display: 'Playfair Display', serif;
-    --font-sans: 'Be Vietnam Pro', sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
     /* Ceramic & Silk Heritage Colors */
     --color-men-lam: #1E3F5A;
+    --color-men-lam-dark: #12283A;
+    --color-men-lam-soft: #EBF2F7;
     --color-men-ngoc: #2E6254;
+    --color-men-ngoc-soft: #E9F2EE;
     --color-chu-sa: #B93826;
+    --color-chu-sa-dark: #8E2516;
+    --color-chu-sa-soft: #FBEFEF;
     --color-to-tam: #C88E1B;
+    --color-to-tam-ink: #8A5D0B;
+    --color-to-tam-soft: #FDF9F0;
     --color-nen-tro: #F8F6F0;
+    --color-surface-warm: #FAF8F3;
+    --color-border-heritage: #DED7C6;
+    --color-ink: #161A1D;
+    --color-ink-secondary: #4A5560;
+
+    /* Standard motion curve */
+    --ease-out-heritage: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     font-family: var(--font-sans);
     background-color: var(--color-nen-tro);
-    color: #161A1D;
+    color: var(--color-ink);
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, .font-heritage-display {
     font-family: var(--font-display);
   }
+
+  button:focus-visible,
+  a:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--color-men-lam);
+    outline-offset: 2px;
+  }
 }
+
+@keyframes vp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vp-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Real CSS support for animate-in / fade-in / zoom-in utilities across screens */
+.animate-in {
+  animation: vp-fade-in 220ms var(--ease-out-heritage) both;
+}
+
+.fade-in {
+  animation-name: vp-fade-in;
+}
+
+.zoom-in-95 {
+  animation-name: vp-zoom-in;
+}
+
+/* Heritage surface utilities */
+.heritage-paper-bg {
+  background-color: var(--color-nen-tro);
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(30, 63, 90, 0.045) 0%, transparent 45%),
+    radial-gradient(circle at 88% 8%, rgba(200, 142, 27, 0.05) 0%, transparent 40%);
+}
+
+.heritage-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border-heritage);
+  box-shadow: 0 2px 10px -2px rgba(22, 26, 29, 0.04);
+  transition: transform 200ms var(--ease-out-heritage),
+              box-shadow 200ms var(--ease-out-heritage),
+              border-color 200ms var(--ease-out-heritage);
+}
+
+.heritage-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -6px rgba(30, 63, 90, 0.1);
+}
+
+.heritage-card-interactive:active {
+  transform: translateY(0) scale(0.995);
+}
+
+/* Respect user reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .heritage-card-interactive:hover,
+  .heritage-card-interactive:active {
+    transform: none !important;
+  }
+}
+
