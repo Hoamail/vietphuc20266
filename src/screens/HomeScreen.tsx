@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Sparkles, ArrowRight, ShieldCheck, BookOpen, Layers, CheckCircle2, Camera } from 'lucide-react';
-import { getTrangPhucById, KB_NGUON, getLoaiNguonLabel, formatNguonText, getOutfitHoverNote } from '../data/kb';
+import { getTrangPhucById, KB_NGUON, getLoaiNguonLabel, formatNguonText } from '../data/kb';
 import { GuardianBadge } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 
@@ -61,8 +61,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="inline-flex flex-wrap items-center gap-2 text-xs text-[#F3EFE6] mb-3 font-medium tracking-wide">
             <span className="w-2 h-2 rounded-full bg-[#C88E1B]" />
             <span>AI Arena Vietnam 2026</span>
-            <span aria-hidden="true" className="text-[#C88E1B]">·</span>
-            <span>Kho tri thức di sản KB-v3</span>
           </div>
 
           <h1 className="font-heritage-display text-2xl sm:text-4xl lg:text-[42px] font-bold tracking-tight text-white text-balance leading-[1.18]">
@@ -154,9 +152,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <h2 className="font-heritage-display text-xl sm:text-2xl font-bold text-[#161A1D]">
               Trang Phục Tiêu Biểu
             </h2>
-            <p className="text-xs sm:text-sm text-[#4A5560] mt-0.5">
-              Dữ liệu đối chiếu chuẩn từ nguồn tri thức KB-v3
-            </p>
           </div>
           <button
             type="button"
@@ -207,10 +202,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {/* Card Body */}
                 <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
                   <div>
-                    <h3
-                      title={getOutfitHoverNote(outfit)}
-                      className="font-heritage-display text-lg font-bold text-[#161A1D] group-hover:text-[#1E3F5A] transition-colors leading-snug"
-                    >
+                    <h3 className="font-heritage-display text-lg font-bold text-[#161A1D] group-hover:text-[#1E3F5A] transition-colors leading-snug">
                       {outfit.ten}
                     </h3>
                     <div className="text-xs font-mono text-[#6E5D4B] mt-1 mb-2">
@@ -258,7 +250,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             Sáng Tạo Đương Đại Trên Nền Tảng Di Sản Chuẩn Xác
           </h2>
           <p className="text-xs sm:text-sm text-[#3E4C59] mt-2 leading-relaxed">
-            Chúng tôi đảm bảo mọi thông tin về cấu tạo cổ áo, tay áo và thân vải đều trích xuất trung thực từ tư liệu được lưu trữ trong KB-v3; không suy diễn hay tạo lập dữ liệu chưa có kiểm chứng.
+            Chúng tôi đảm bảo mọi thông tin về cấu tạo cổ áo, tay áo và thân vải đều trích xuất trung thực từ các nguồn tư liệu đối chiếu; không suy diễn hay tạo lập dữ liệu chưa có kiểm chứng.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2.5 text-xs text-[#1E3F5A] font-medium">

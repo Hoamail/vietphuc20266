@@ -26,7 +26,6 @@ export interface KBTranhNhamItem {
 export interface KBTrangPhuc {
   id: string;
   ten: string;
-  ghi_chu_ten?: string;
   nhom: KBNhom;
   thoi_ky: string;
   boi_canh_su_dung: string[];

@@ -8,7 +8,6 @@ import {
   BOI_CANH,
   getBoiCanhById,
   POTTERY_SILK_PALETTES,
-  getOutfitHoverNote,
 } from '../data/kb';
 import { EmptyState } from '../components/StatesFeedback';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
@@ -100,7 +99,6 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
             <button
               type="button"
               key={o.id}
-              title={getOutfitHoverNote(o)}
               onClick={() => setFilterOutfitId(o.id)}
               className={`min-h-[44px] px-3.5 py-2 text-xs rounded-xl font-semibold cursor-pointer transition-colors whitespace-nowrap ${
                 filterOutfitId === o.id
@@ -190,7 +188,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3.5">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-xs text-[#4A5560] font-medium flex-wrap">
-                      <span title={getOutfitHoverNote(outfit)} className="text-[#161A1D] font-semibold">
+                      <span className="text-[#161A1D] font-semibold">
                         {outfit?.ten || 'Trang phục'}
                       </span>
                       <span aria-hidden="true">·</span>
@@ -291,10 +289,7 @@ export const LookbookScreen: React.FC<LookbookScreenProps> = ({
                     />
 
                     <div className="absolute bottom-3 left-3 right-3 text-[#161A1D] bg-white/95 p-3 rounded-xl border border-[#DED7C6] shadow-sm">
-                      <div
-                        title={getOutfitHoverNote(outfit)}
-                        className="text-xs text-[#4A5560] font-semibold"
-                      >
+                      <div className="text-xs text-[#4A5560] font-semibold">
                         {outfit?.ten}
                       </div>
                       <h4 className="font-heritage-display text-base font-bold text-[#1E3F5A] leading-tight">

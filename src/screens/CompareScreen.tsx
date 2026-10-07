@@ -6,7 +6,6 @@ import {
   getTrangPhucById,
   KB_NGUON,
   getLoaiNguonLabel,
-  getOutfitHoverNote,
 } from '../data/kb';
 import { KBTrangPhuc } from '../types/kb';
 import { EmptyState } from '../components/StatesFeedback';
@@ -38,8 +37,6 @@ export const CompareScreen: React.FC<CompareScreenProps> = ({
         <div>
           <div className="flex items-center gap-2 text-xs text-[#1E3F5A] uppercase tracking-wider font-bold mb-1">
             <span>Ma trận đối chiếu</span>
-            <span aria-hidden="true">·</span>
-            <span>Kho tri thức KB-v3</span>
           </div>
           <h1 className="font-heritage-display text-2xl sm:text-3xl font-bold text-[#161A1D]">
             So Sánh Trang Phục Truyền Thống
@@ -100,20 +97,14 @@ export const CompareScreen: React.FC<CompareScreenProps> = ({
                 type="button"
                 key={outfit.id}
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                title={getOutfitHoverNote(outfit)}
                 onClick={() => onToggleOutfit(outfit.id)}
-                className={`relative group/btn min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`relative min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
                   isChecked
                     ? 'bg-[#1E3F5A] text-white border-[#1E3F5A] shadow-xs'
                     : 'bg-[#FAF8F3] text-[#4A5560] border-[#DED7C6] hover:border-[#1E3F5A] hover:text-[#161A1D]'
                 }`}
               >
                 <span>{outfit.ten}</span>
-                {getOutfitHoverNote(outfit) && (
-                  <span className="pointer-events-none opacity-0 group-hover/btn:opacity-100 transition-opacity absolute left-1/2 -translate-x-1/2 -top-8 z-20 whitespace-nowrap rounded-lg bg-[#161A1D] px-2.5 py-1 text-xs font-medium text-white shadow-md">
-                    {getOutfitHoverNote(outfit)}
-                  </span>
-                )}
                 {isChecked ? (
                   <Check className="w-3.5 h-3.5 shrink-0" />
                 ) : (
@@ -196,10 +187,7 @@ export const CompareScreen: React.FC<CompareScreenProps> = ({
 
                         {/* Title */}
                         <div className="p-4 border-b border-[#DED7C6]/70 bg-white">
-                          <h3
-                            title={getOutfitHoverNote(outfit)}
-                            className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D] leading-tight"
-                          >
+                          <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D] leading-tight">
                             {outfit.ten}
                           </h3>
                           <div className="mt-1.5 flex items-center gap-1.5 text-xs text-[#2E6254] font-semibold">

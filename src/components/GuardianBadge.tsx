@@ -14,11 +14,12 @@ import { KBMucChacChan } from '../types/kb';
 import { OptionGuardianState, GuardianLoaiLyDo } from '../types/vietphuc';
 import { KB_NGUON, getLoaiNguonLabel, BOI_CANH } from '../data/kb';
 import { formatNoSourceText } from './SourceCitationText';
+import { isInsufficientBasisResult } from '../utils/guardianRules';
 
 export function getGuardianLoaiLyDoLabel(loai?: GuardianLoaiLyDo | string): string {
   switch (loai) {
     case 'lich_su':
-      return 'Lịch sử';
+      return 'Tư liệu';
     case 'thong_le_ung_xu':
       return 'Thông lệ, không phải quy định';
     case 'tham_my':
@@ -26,7 +27,7 @@ export function getGuardianLoaiLyDoLabel(loai?: GuardianLoaiLyDo | string): stri
     case 'thieu_can_cu':
       return 'Chưa đủ căn cứ';
     case 'nguyen_tac_app':
-      return 'Nguyên tắc của app';
+      return 'Gợi ý của app';
     default:
       return 'Thông lệ, không phải quy định';
   }
@@ -121,6 +122,7 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
     }
 
     // Status is 'success' with result
+    const isInsufficientBasis = isInsufficientBasisResult(result);
     let badgeText = 'Cần lưu ý';
     let badgeStyle = {
       bg: 'bg-[#FDF9F0]',
@@ -130,7 +132,16 @@ export const GuardianBadge: React.FC<GuardianBadgeProps> = ({
       icon: <AlertTriangle className="w-3.5 h-3.5 text-[#C88E1B] shrink-0" />,
     };
 
-    if (result.nhan === 'hai_hoa') {
+    if (result.nhan === 'hai_hoa' && isInsufficientBasis) {
+      badgeText = 'Chưa đủ căn cứ';
+      badgeStyle = {
+        bg: 'bg-[#F2EFE9]',
+        text: 'text-[#4A5560]',
+        border: 'border-[#DED7C6]',
+        hover: 'hover:bg-[#E8E3D9]',
+        icon: <AlertCircle className="w-3.5 h-3.5 text-[#4A5560] shrink-0" />,
+      };
+    } else if (result.nhan === 'hai_hoa') {
       badgeText = 'Hài hoà';
       badgeStyle = {
         bg: 'bg-[#E9F2EE]',
@@ -304,7 +315,18 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
   result,
   onClose,
 }) => {
+  const isInsufficientBasis = isInsufficientBasisResult(result);
+
   const getDanhGiaBadge = () => {
+    if (result.nhan === 'hai_hoa' && isInsufficientBasis) {
+      return {
+        label: 'Chưa đủ căn cứ',
+        bg: 'bg-[#F2EFE9]',
+        text: 'text-[#4A5560]',
+        border: 'border-[#DED7C6]',
+        desc: 'Dữ liệu bối cảnh hiện chưa nêu trang phục này trong danh mục ưu tiên đối chiếu.',
+      };
+    }
     switch (result.nhan) {
       case 'hai_hoa':
         return {
@@ -337,73 +359,114 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
   const badge = getDanhGiaBadge();
 
   const renderSourceContent = (maNguon: string | null) => {
-    if (!maNguon) {
+    if (!maNguon || !maNguon.trim()) {
       return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
     }
 
-    const kbSrc = KB_NGUON[maNguon];
-    if (kbSrc) {
-      return (
-        <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
-            [{maNguon}]
-          </span>
-          <span className="font-medium text-[#161A1D]">{kbSrc.ten}</span>
-          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] text-[#4A5560] font-semibold">
-            {getLoaiNguonLabel(kbSrc.loai)}
-          </span>
-          {kbSrc.url && (
-            <a
-              href={kbSrc.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-1 font-medium"
-            >
-              <span>Xem tư liệu</span>
-              <ExternalLink className="w-3 h-3 shrink-0" />
-            </a>
-          )}
-        </div>
-      );
+    const codes = maNguon
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (codes.length === 0) {
+      return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
     }
 
-    const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(maNguon);
-    if (bcMatch) {
-      const bcId = bcMatch[1];
-      const oneBasedIdx = parseInt(bcMatch[2], 10);
-      const targetBc = BOI_CANH.find((b) => b.id === bcId);
-      const url =
-        targetBc && Array.isArray(targetBc.nguon) && oneBasedIdx >= 1 && oneBasedIdx <= targetBc.nguon.length
-          ? targetBc.nguon[oneBasedIdx - 1]
-          : undefined;
+    const kbCodes = codes.filter((c) => Boolean(KB_NGUON[c]));
+    const bcCodes = codes.filter((c) => /^BC-([a-z0-9_]+)-(\d+)$/i.test(c));
+    const otherCodes = codes.filter(
+      (c) => !KB_NGUON[c] && !/^BC-([a-z0-9_]+)-(\d+)$/i.test(c)
+    );
 
-      return (
-        <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
-          <span className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25">
-            [{maNguon}]
+    const visibleKbCodes = kbCodes.slice(0, 3);
+    const extraKbCount = kbCodes.length > 3 ? kbCodes.length - 3 : 0;
+
+    return (
+      <div className="inline-flex flex-wrap items-center gap-1.5 mt-0.5">
+        {visibleKbCodes.map((code) => {
+          const kbSrc = KB_NGUON[code];
+          return (
+            <span
+              key={code}
+              className="inline-flex items-center gap-1 font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+              title={`${kbSrc.ten} (${getLoaiNguonLabel(kbSrc.loai)})`}
+            >
+              <span>[{code}]</span>
+              {kbSrc.url && (
+                <a
+                  href={kbSrc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#1E3F5A] hover:underline inline-flex items-center"
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                </a>
+              )}
+            </span>
+          );
+        })}
+        {extraKbCount > 0 && (
+          <span
+            className="font-mono font-bold text-[#4A5560] bg-[#FAF7F2] px-2 py-0.5 rounded-md border border-[#DED7C6]"
+            title={kbCodes.slice(3).join(', ')}
+          >
+            +{extraKbCount}
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-md bg-[#FDF9F0] border border-[#C88E1B]/35 text-[#7C4D1B] font-semibold">
-            Thông lệ bối cảnh
-          </span>
-          {url ? (
+        )}
+        {bcCodes.map((code) => {
+          const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(code);
+          if (!bcMatch) return null;
+          const bcId = bcMatch[1];
+          const oneBasedIdx = parseInt(bcMatch[2], 10);
+          const targetBc = BOI_CANH.find((b) => b.id === bcId);
+          const url =
+            targetBc &&
+            Array.isArray(targetBc.nguon) &&
+            oneBasedIdx >= 1 &&
+            oneBasedIdx <= targetBc.nguon.length
+              ? targetBc.nguon[oneBasedIdx - 1]
+              : undefined;
+
+          if (!url) {
+            return (
+              <span
+                key={code}
+                className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+              >
+                [{code}]
+              </span>
+            );
+          }
+
+          let domain = url;
+          try {
+            domain = new URL(url).hostname.replace(/^www\./i, '');
+          } catch {
+            domain = url;
+          }
+
+          return (
             <a
+              key={code}
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#1E3F5A] hover:underline inline-flex items-center gap-1 break-all font-medium"
+              className="text-[#1E3F5A] bg-[#EBF2F7] hover:bg-[#DCE8F2] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25 hover:underline inline-flex items-center gap-1 font-medium"
             >
-              <span>{url}</span>
+              <span>{domain}</span>
               <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
-          ) : (
-            <span className="text-[#161A1D]">Bối cảnh {targetBc?.ten || bcId}</span>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <span className="font-mono font-bold text-[#1E3F5A]">[{maNguon}]</span>
+          );
+        })}
+        {otherCodes.map((code) => (
+          <span
+            key={code}
+            className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+          >
+            [{code}]
+          </span>
+        ))}
+      </div>
     );
   };
 
@@ -488,7 +551,7 @@ const OptionGuardianDetailModal: React.FC<OptionGuardianDetailModalProps> = ({
                 </span>
                 <span className="text-xs text-[#4A5560] font-mono">Mục 0{idx + 1}</span>
               </div>
-              <p className="text-[#161A1D] leading-relaxed">
+              <p className="text-[#161A1D] leading-relaxed whitespace-pre-line">
                 {item.noi_dung}
               </p>
               <div className="pt-1.5 border-t border-[#F0EBE0] text-xs flex flex-wrap items-center gap-1.5">
@@ -575,7 +638,7 @@ const OptionGuardianErrorModal: React.FC<OptionGuardianErrorModalProps> = ({
             Hệ thống chưa thể hoàn thành đối chiếu bảo chứng văn hoá tự động cho phương án này vào lúc này.
           </p>
           <p className="text-xs text-[#4A5560]">
-            Vui lòng kiểm tra lại kết nối mạng hoặc thử lại. Các thông tin trích dẫn lịch sử từ KB-v3 vẫn giữ nguyên giá trị.
+            Vui lòng kiểm tra lại kết nối mạng hoặc thử lại. Các thông tin trích dẫn lịch sử từ tư liệu vẫn giữ nguyên giá trị.
           </p>
         </div>
 

@@ -263,7 +263,7 @@
         "GN",
         "VHVN"
       ],
-      "ghi_chu_can_kiem_chung": "Các nguồn hiện có chưa phân biệt được rõ ràng Giao Lĩnh Việt Nam với Hán phục. Thuật ngữ mô tả chiều vạt áo (Tả nhậm / Hữu nhậm) có sự mâu thuẫn cách hiểu giữa các nguồn [GN, VHVN] nên đã được lược bỏ khỏi phần căn cứ kỹ thuật cốt lõi."
+      "ghi_chu_can_kiem_chung": "Các nguồn hiện có chưa phân biệt được rõ ràng Giao Lĩnh Việt Nam với Hán phục. Cách gọi chiều vạt áo trong các nguồn mâu thuẫn nhau nên không dùng thuật ngữ làm căn cứ; mô tả bằng hình thức (vạt trái phủ ngoài vạt phải)."
     },
     {
       "id": "ao_tu_than",
@@ -320,8 +320,7 @@
     },
     {
       "id": "ao_dai_tan_thoi",
-      "ten": "Áo dài Lê Phổ",
-      "ghi_chu_ten": "Áo dài hiện đại",
+      "ten": "Áo dài hiện đại",
       "nhom": "hien_dai_cach_tan",
       "thoi_ky": "Áo dài Lemur ra đời năm 1934 [A4, A5] hoặc cuối những năm 1930 [A1] do họa sĩ Cát Tường sáng tạo. Kiểu tay Raglan xuất hiện vào thập niên 1960 do nhà may Dung ở Đakao (Sài Gòn) sáng tạo [A1, A2].",
       "boi_canh_su_dung": [

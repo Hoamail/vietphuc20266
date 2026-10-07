@@ -715,7 +715,6 @@ interface GarmentFrameShellProps {
   colorSchemeId?: string;
   selectedAccessoryIds?: string[];
   remixLevel?: 1 | 2 | 3;
-  hoverTitle?: string;
   children: (ctx: {
     patternId: string;
     shadeGradId: string;
@@ -730,7 +729,6 @@ const GarmentFrameShell: React.FC<GarmentFrameShellProps> = ({
   colorSchemeId,
   selectedAccessoryIds,
   remixLevel,
-  hoverTitle,
   children,
 }) => {
   const rawUid = useId().replace(/:/g, '');
@@ -778,7 +776,6 @@ const GarmentFrameShell: React.FC<GarmentFrameShellProps> = ({
     <div
       role="img"
       aria-label={ariaLabel}
-      title={hoverTitle}
       style={rootStyle}
       className={`relative flex flex-col items-center justify-between rounded-xl overflow-hidden p-2 border transition-colors duration-200 motion-reduce:transition-none ${className}`}
     >
@@ -789,7 +786,6 @@ const GarmentFrameShell: React.FC<GarmentFrameShellProps> = ({
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {hoverTitle && <title>{hoverTitle}</title>}
           <defs>
             {/* Hoạ tiết dệt/gốm kỷ hà trừu tượng chung (không rồng/phượng) */}
             <pattern id={patternId} width="12" height="12" patternUnits="userSpaceOnUse">
@@ -1437,7 +1433,7 @@ export const AoTuThanIllustration: React.FC<SVGComponentProps> = ({
 };
 
 /**
- * 5. Áo dài Lê Phổ (Áo dài hiện đại: Lemur / Lê Phổ / Raglan)
+ * 5. Áo dài hiện đại
  * Nhận diện: Dáng áo ôm sát thon thả, cổ đứng cao kín đáo, đường ráp chéo tay Raglan,
  * hàng cúc bấm vai phải người mặc (bên trái hình), hai tà dài xẻ hai bên hông từ eo, quần dài trắng.
  */
@@ -1454,7 +1450,6 @@ export const AoDaiTanThoiIllustration: React.FC<SVGComponentProps> = ({
       colorSchemeId={colorSchemeId}
       selectedAccessoryIds={selectedAccessoryIds}
       remixLevel={remixLevel}
-      hoverTitle="Áo dài hiện đại"
     >
       {({ patternId, shadeGradId }) => (
         <>

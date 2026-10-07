@@ -15,7 +15,7 @@ import {
   FileText,
   RotateCw,
 } from 'lucide-react';
-import { KB_TRANG_PHUC, getTrangPhucById, getOutfitHoverNote } from '../data/kb';
+import { KB_TRANG_PHUC, getTrangPhucById } from '../data/kb';
 import { ImageGuardianResult } from '../types/vietphuc';
 
 const ALLOWED_GUARDIAN_MIMES = new Set<string>([
@@ -233,7 +233,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
           label: 'Hài hoà',
           bg: 'bg-[#E9F2EE] border-[#2E6254]/40 text-[#2E6254]',
           dot: 'bg-[#2E6254]',
-          desc: 'Các đặc điểm nhận diện chính trên ảnh khớp với tư liệu KB-v3.',
+          desc: 'Các đặc điểm nhận diện chính trên ảnh khớp với tư liệu.',
         };
       case 'can_luu_y':
         return {
@@ -292,7 +292,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
               <span>Kiểm tra ảnh trang phục (Image Guardian)</span>
             </h1>
             <p className="text-xs sm:text-sm text-[#4A5560] mt-1 leading-relaxed">
-              Đối chiếu chi tiết hình ảnh thực tế với đặc điểm nhận diện trong cơ sở dữ liệu KB-v3.
+              Đối chiếu chi tiết hình ảnh thực tế với đặc điểm nhận diện của trang phục.
             </p>
           </div>
         </div>
@@ -304,7 +304,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
           <ShieldCheck className="w-4 h-4 text-[#1E3F5A]" />
         </div>
         <div className="leading-relaxed">
-          <strong className="text-[#161A1D]">Bảo mật & Quyền riêng tư:</strong> Ảnh tải lên chỉ phân tích trực tiếp trong phiên này và không lưu trữ trên máy chủ. Tính năng hỗ trợ nhận diện hình thức trực quan, không nhận diện danh tính hay ngoại hình người mặc.
+          <strong className="text-[#161A1D]">Bảo mật & Quyền riêng tư:</strong> Ảnh tải lên chỉ phân tích trực tiếp trong phiên này và không lưu trữ trên máy chủ. Tính năng hỗ trợ nhận diện hình thức trực quan, không nhận diện danh tính hay ngoại hình người mặc. Ảnh được gửi tới dịch vụ Gemini API của Google để phân tích; không tải ảnh người khác hoặc trẻ em.
         </div>
       </div>
 
@@ -320,7 +320,6 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
             <select
               id="guardian-outfit-select"
               value={selectedOutfitId}
-              title={getOutfitHoverNote(selectedOutfit)}
               onChange={(e) => {
                 setSelectedOutfitId(e.target.value);
                 setApiError(null);
@@ -329,7 +328,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
               className="w-full min-h-[44px] text-sm font-semibold border border-[#DED7C6] rounded-xl px-3.5 py-2.5 bg-[#FAF8F3] text-[#161A1D] focus:outline-none focus:ring-2 focus:ring-[#1E3F5A] cursor-pointer transition-colors"
             >
               {KB_TRANG_PHUC.map((outfit) => (
-                <option key={outfit.id} value={outfit.id} title={getOutfitHoverNote(outfit)}>
+                <option key={outfit.id} value={outfit.id}>
                   {outfit.ten}
                 </option>
               ))}
@@ -447,6 +446,10 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                 </div>
               </div>
             )}
+
+            <p className="text-xs text-[#4A5560] leading-relaxed pt-1 border-t border-[#EAE4D7]">
+              Ảnh được gửi tới dịch vụ Gemini API của Google để phân tích; không tải ảnh người khác hoặc trẻ em.
+            </p>
           </div>
 
           {/* Card: Xác nhận cam kết & Captcha bảo mật */}
@@ -535,7 +538,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
             {isLoading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Đang đối chiếu chi tiết ảnh với tư liệu KB...</span>
+                <span>Đang đối chiếu chi tiết ảnh với tư liệu...</span>
               </>
             ) : (
               <>
@@ -580,7 +583,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                 </div>
                 <div>
                   <div className="text-sm sm:text-base font-bold text-[#161A1D]">
-                    Đang đối chiếu chi tiết ảnh với tư liệu KB...
+                    Đang đối chiếu chi tiết ảnh với tư liệu...
                   </div>
                   <div className="text-xs text-[#4A5560] mt-0.5 leading-relaxed">
                     Kiểm tra cấu tạo nẹp cổ, hàng cúc, phom tay áo và hướng vạt áo theo quy chuẩn trang phục {selectedOutfit.ten}.
@@ -617,10 +620,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                   <div className="text-xs font-mono uppercase tracking-wider text-[#1E3F5A] font-bold">
                     Kết quả đối chiếu hình ảnh · Cultural Guardian
                   </div>
-                  <div
-                    title={getOutfitHoverNote(selectedOutfit)}
-                    className="font-heritage-display text-lg sm:text-xl font-bold text-[#161A1D]"
-                  >
+                  <div className="font-heritage-display text-lg sm:text-xl font-bold text-[#161A1D]">
                     {selectedOutfit.ten}
                   </div>
                 </div>
@@ -639,7 +639,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
 
               {/* Mức chắc chắn tư liệu */}
               <div className="flex items-center justify-between text-xs px-4 py-3 bg-[#FAF8F3] rounded-xl border border-[#DED7C6]">
-                <span className="text-[#4A5560] font-medium">Mức chắc chắn tư liệu trong KB:</span>
+                <span className="text-[#4A5560] font-medium">Mức chắc chắn tư liệu:</span>
                 <span className="font-bold text-[#1E3F5A] px-2.5 py-0.5 rounded-md bg-white border border-[#DED7C6]">
                   {getCertaintyLabel(result.do_chac_chan)}
                 </span>
@@ -730,7 +730,6 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                 {onSelectOutfitForRemix && (
                   <button
                     type="button"
-                    title={getOutfitHoverNote(selectedOutfit)}
                     onClick={() => onSelectOutfitForRemix(selectedOutfit.id)}
                     className="min-h-[44px] text-xs font-semibold bg-[#1E3F5A] text-white px-4 py-2 rounded-xl hover:bg-[#12283A] transition-colors cursor-pointer shadow-xs"
                   >
@@ -750,7 +749,7 @@ export const ImageGuardianScreen: React.FC<ImageGuardianScreenProps> = ({
                 Sẵn sàng kiểm tra ảnh trang phục
               </h3>
               <p className="text-xs sm:text-sm text-[#4A5560] max-w-md mx-auto leading-relaxed">
-                Tải lên ảnh chụp góc thẳng hoặc rõ nẹp cổ, hàng cúc và phom tay áo để Cultural Guardian đối chiếu trực tiếp với quy chuẩn trang phục trong cơ sở dữ liệu KB-v3.
+                Tải lên ảnh chụp góc thẳng hoặc rõ nẹp cổ, hàng cúc và phom tay áo để Cultural Guardian đối chiếu trực tiếp với đặc điểm nhận diện của trang phục.
               </p>
               <div className="pt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-[#4A5560] font-medium">
                 <span className="px-3 py-1.5 rounded-xl bg-[#FAF8F3] border border-[#DED7C6]">

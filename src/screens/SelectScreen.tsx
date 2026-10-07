@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Check, Sparkles, Eye } from 'lucide-react';
-import { KB_DATA, KB_TRANG_PHUC, getOutfitHoverNote } from '../data/kb';
+import { KB_DATA, KB_TRANG_PHUC } from '../data/kb';
 import { KBTrangPhuc, KBNhom } from '../types/kb';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { KBOutfitDetailModal } from './KBOutfitDetailModal';
@@ -87,14 +87,12 @@ export const SelectScreen: React.FC<SelectScreenProps> = ({
           <span className="px-2 py-0.5 rounded-md bg-[#1E3F5A] text-white font-mono">
             Bước 1 / 3
           </span>
-          <span aria-hidden="true">·</span>
-          <span>Khám phá kho tri thức cổ phục v3</span>
         </div>
         <h1 className="font-heritage-display text-2xl sm:text-3xl font-bold text-[#161A1D] text-balance">
           Chọn Trang Phục Truyền Thống
         </h1>
         <p className="text-xs sm:text-sm text-[#4A5560] mt-1.5 leading-relaxed max-w-2xl">
-          Toàn bộ dữ liệu được quản lý theo tiêu chuẩn minh bạch nguồn gốc (KB-v3) với minh họa đồ họa vector trung tính không bản quyền.
+          Khám phá đặc điểm cấu tạo và lựa chọn trang phục truyền thống bạn muốn phối đồ.
         </p>
       </div>
 
@@ -107,10 +105,7 @@ export const SelectScreen: React.FC<SelectScreenProps> = ({
             </h2>
             <span className="text-xs text-[#4A5560] mt-0.5 inline-block">
               Đang chọn:{' '}
-              <strong
-                title={getOutfitHoverNote(currentOutfit)}
-                className="text-[#161A1D] font-semibold"
-              >
+              <strong className="text-[#161A1D] font-semibold">
                 {currentOutfit.ten}
               </strong>
             </span>
@@ -203,18 +198,8 @@ export const SelectScreen: React.FC<SelectScreenProps> = ({
                   <div>
                     {/* Tên & Nhãn mức chắc chắn */}
                     <div className="flex items-start justify-between gap-1 mb-1.5">
-                      <h3
-                        title={getOutfitHoverNote(outfit)}
-                        className="relative group/name font-heritage-display text-base sm:text-lg font-bold text-[#161A1D] group-hover:text-[#1E3F5A] transition-colors leading-snug inline-flex items-center gap-1"
-                      >
-                        <span className={getOutfitHoverNote(outfit) ? 'underline decoration-dotted decoration-[#6E5D4B] underline-offset-4' : ''}>
-                          {outfit.ten}
-                        </span>
-                        {getOutfitHoverNote(outfit) && (
-                          <span className="pointer-events-none opacity-0 group-hover/name:opacity-100 transition-opacity absolute left-0 -top-7 z-20 whitespace-nowrap rounded-md bg-[#161A1D] px-2.5 py-1 font-sans text-xs font-medium text-white shadow-md">
-                            {getOutfitHoverNote(outfit)}
-                          </span>
-                        )}
+                      <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D] group-hover:text-[#1E3F5A] transition-colors leading-snug">
+                        {outfit.ten}
                       </h3>
                     </div>
 
@@ -276,10 +261,7 @@ export const SelectScreen: React.FC<SelectScreenProps> = ({
             <Sparkles className="w-5 h-5 text-[#1E3F5A]" />
           </div>
           <div>
-            <div
-              title={getOutfitHoverNote(currentOutfit)}
-              className="font-semibold text-sm sm:text-base text-[#1E3F5A]"
-            >
+            <div className="font-semibold text-sm sm:text-base text-[#1E3F5A]">
               Trang phục đang chọn: {currentOutfit.ten}
             </div>
             <p className="text-xs sm:text-sm text-[#3E4C59] mt-0.5 leading-relaxed">

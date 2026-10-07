@@ -28,13 +28,13 @@ import {
   getLoaiNguonLabel,
   getMucChacChanLabel,
   formatNguonText,
-  getOutfitHoverNote,
 } from '../data/kb';
 import { RemixCustomization, SavedLook, WeatherCondition, StylistPhuongAn, OptionGuardianState } from '../types/vietphuc';
 import { KBTrangPhuc } from '../types/kb';
-import { GuardianBadge } from '../components/GuardianBadge';
+import { GuardianBadge, getGuardianLoaiLyDoLabel } from '../components/GuardianBadge';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText } from '../components/SourceCitationText';
+import { computeGuardian } from '../utils/guardianRules';
 
 interface ResultScreenProps {
   selectedOutfitId: string;
@@ -79,9 +79,7 @@ function formatWeatherSummary(w: WeatherCondition): string {
 
 function formatHuunhamText(text: string): string {
   if (!text) return '';
-  return text
-    .replace(/hữu nhậm/gi, 'vạt trái phủ ngoài vạt phải')
-    .replace(/tả nhậm/gi, 'vạt phải phủ ngoài vạt trái');
+  return text;
 }
 
 const POPULAR_CITIES = ['Hà Nội', 'TP. Hồ Chí Minh', 'Huế', 'Đà Nẵng', 'Hội An', 'Cần Thơ', 'Hải Phòng'];
@@ -155,7 +153,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
               </h3>
               <p className="text-xs text-[#4A5560]">
                 Trang phục:{' '}
-                <span title={getOutfitHoverNote(outfit)} className="font-semibold text-[#1E3F5A]">
+                <span className="font-semibold text-[#1E3F5A]">
                   {outfit.ten}
                 </span>{' '}
                 · {phuongAn.ten}
@@ -303,7 +301,7 @@ const RentalSearchModal: React.FC<RentalSearchModalProps> = ({ outfit, phuongAn,
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-bold text-[#1E3F5A] uppercase tracking-wider flex items-center gap-1.5">
                 <CheckSquare className="w-3.5 h-3.5 text-[#C88E1B]" />
-                <span>3. Checklist nên hỏi tiệm (từ tư liệu KB-v3)</span>
+                <span>3. Checklist nên hỏi tiệm</span>
               </label>
               <span className="text-xs text-[#4A5560]">Bấm để đánh dấu</span>
             </div>
@@ -447,11 +445,6 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const [styleErrorReason, setStyleErrorReason] = useState<string | null>(null);
   const lastFetchedKeyRef = useRef<string | null>(null);
 
-  // State Cultural Guardian cho từng phương án (key = pa.token)
-  const [guardianStates, setGuardianStates] = useState<Record<string, OptionGuardianState>>({});
-  // Set lưu các token phương án đã hoặc đang được gửi đi thẩm định Guardian (ngăn vòng lặp tuyệt đối)
-  const evaluatedTokensRef = useRef<Set<string>>(new Set());
-
   const outfit = getTrangPhucById(selectedOutfitId) || KB_TRANG_PHUC[0];
   const boiCanh = getBoiCanhById(customization.purposeId) || BOI_CANH[0];
   const colorScheme =
@@ -473,6 +466,26 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     return accessoryOptions.filter((a) => validSelectedAccessoryIds.includes(a.id));
   }, [accessoryOptions, validSelectedAccessoryIds]);
 
+  // Tính đồng bộ Cultural Guardian văn bản ở Frontend (không gọi AI, status luôn "success")
+  const guardianResult = useMemo(
+    () =>
+      computeGuardian({
+        outfit,
+        boiCanh,
+        remixLevel: customization.remixLevel,
+        selectedAccessoryIds: validSelectedAccessoryIds,
+      }),
+    [outfit, boiCanh, customization.remixLevel, validSelectedAccessoryIds]
+  );
+
+  const guardianEvaluation: OptionGuardianState = useMemo(
+    () => ({
+      status: 'success',
+      result: guardianResult,
+    }),
+    [guardianResult]
+  );
+
   const requestPayload = useMemo(() => ({
     outfitId: outfit.id,
     purposeId: boiCanh.id,
@@ -491,18 +504,10 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
   const requestKey = useMemo(() => JSON.stringify(requestPayload), [requestPayload]);
 
-  // Luôn giữ tham chiếu params mới nhất trong ref để async hàm Guardian đọc được mà không biến đổi dependency
-  const currentParamsRef = useRef(requestPayload);
-  useEffect(() => {
-    currentParamsRef.current = requestPayload;
-  }, [requestPayload]);
-
   const fetchStyleOptions = useCallback(async () => {
     setIsLoadingStyle(true);
     setStyleError(null);
     setStyleErrorReason(null);
-    setGuardianStates({});
-    evaluatedTokensRef.current.clear();
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 31000);
@@ -579,118 +584,115 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
     fetchStyleOptions();
   };
 
-  // Hàm gọi POST /api/guard cho từng phương án với tham chiếu ổn định tuyệt đối (rỗng dependencies)
-  const evaluateOptionGuardian = useCallback(
-    async (pa: StylistPhuongAn, isManualRetry = false) => {
-      if (!pa || !pa.token) return;
-
-      // Nếu không phải thao tác bấm thử lại thủ công và token đã có trong hàng đợi/đã gọi -> bỏ qua
-      if (!isManualRetry && evaluatedTokensRef.current.has(pa.token)) {
-        return;
-      }
-
-      // Đánh dấu ngay token để tránh race condition
-      evaluatedTokensRef.current.add(pa.token);
-
-      setGuardianStates((prev) => ({
-        ...prev,
-        [pa.token]: { status: 'loading' },
-      }));
-
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 31000);
-
-      const params = currentParamsRef.current;
-
-      try {
-        const res = await fetch('/api/guard', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            outfitId: params.outfitId,
-            purposeId: params.purposeId,
-            remixLevel: params.remixLevel,
-            colorSchemeId: params.colorSchemeId,
-            selectedAccessoryIds: params.selectedAccessoryIds,
-            weather: params.weather,
-            phuong_an: {
-              ten: pa.ten,
-              mo_ta: pa.mo_ta,
-              thanh_phan: pa.thanh_phan,
-              ly_do_van_hoa: pa.ly_do_van_hoa,
-              ma_nguon: pa.ma_nguon,
-              goi_y_cua_app: pa.goi_y_cua_app,
-            },
-            exp: pa.exp,
-            token: pa.token,
-          }),
-          signal: controller.signal,
-        });
-
-        window.clearTimeout(timeoutId);
-
-        let data: any = null;
-        try {
-          data = await res.json();
-        } catch {
-          setGuardianStates((prev) => ({
-            ...prev,
-            [pa.token]: { status: 'error' },
-          }));
-          return;
-        }
-
-        if (!res.ok || !data || data.success !== true || !data.guardian) {
-          // Xử lý an toàn khi backend báo 429 hoặc 503: hiển thị "Chưa kiểm tra được", tuyệt đối KHÔNG tự retry
-          setGuardianStates((prev) => ({
-            ...prev,
-            [pa.token]: { status: 'error' },
-          }));
-          return;
-        }
-
-        setGuardianStates((prev) => ({
-          ...prev,
-          [pa.token]: {
-            status: 'success',
-            result: data.guardian,
-          },
-        }));
-      } catch {
-        window.clearTimeout(timeoutId);
-        // Khi lỗi mạng, timeout: hiển thị an toàn "Chưa kiểm tra được"
-        setGuardianStates((prev) => ({
-          ...prev,
-          [pa.token]: { status: 'error' },
-        }));
-      }
-    },
-    []
-  );
-
-  // Sau khi có phương án từ /api/style, gọi /api/guard ĐÚNG 1 LẦN cho mỗi phương án mới (tối đa 3)
-  useEffect(() => {
-    if (!phuongAnList || phuongAnList.length === 0) {
-      return;
+  const renderGuardianLyDoSource = (maNguon: string | null) => {
+    if (!maNguon || !maNguon.trim()) {
+      return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
+    }
+    const codes = maNguon
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+    if (codes.length === 0) {
+      return <span className="text-[#4A5560] italic">Chưa có nguồn</span>;
     }
 
-    const itemsToEvaluate = phuongAnList.slice(0, 3).filter(
-      (pa) => pa && pa.token && !evaluatedTokensRef.current.has(pa.token)
+    const kbCodes = codes.filter((c) => Boolean(KB_NGUON[c]));
+    const bcCodes = codes.filter((c) => /^BC-([a-z0-9_]+)-(\d+)$/i.test(c));
+    const otherCodes = codes.filter(
+      (c) => !KB_NGUON[c] && !/^BC-([a-z0-9_]+)-(\d+)$/i.test(c)
     );
 
-    if (itemsToEvaluate.length === 0) {
-      return;
-    }
+    const visibleKbCodes = kbCodes.slice(0, 3);
+    const extraKbCount = kbCodes.length > 3 ? kbCodes.length - 3 : 0;
 
-    // Đánh dấu ngay vào Set trước khi gọi để chặn bất kỳ re-render loop hay duplicate request nào
-    itemsToEvaluate.forEach((pa) => {
-      evaluatedTokensRef.current.add(pa.token);
-    });
+    return (
+      <div className="inline-flex flex-wrap items-center gap-1.5">
+        {visibleKbCodes.map((code) => {
+          const kbSrc = KB_NGUON[code];
+          return (
+            <span
+              key={code}
+              className="inline-flex items-center gap-1 font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+              title={`${kbSrc.ten} (${getLoaiNguonLabel(kbSrc.loai)})`}
+            >
+              <span>[{code}]</span>
+              {kbSrc.url && (
+                <a
+                  href={kbSrc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#1E3F5A] hover:underline inline-flex items-center"
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0" />
+                </a>
+              )}
+            </span>
+          );
+        })}
+        {extraKbCount > 0 && (
+          <span
+            className="font-mono font-bold text-[#4A5560] bg-[#FAF7F2] px-2 py-0.5 rounded-md border border-[#DED7C6]"
+            title={kbCodes.slice(3).join(', ')}
+          >
+            +{extraKbCount}
+          </span>
+        )}
+        {bcCodes.map((code) => {
+          const bcMatch = /^BC-([a-z0-9_]+)-(\d+)$/i.exec(code);
+          if (!bcMatch) return null;
+          const bcId = bcMatch[1];
+          const oneBasedIdx = parseInt(bcMatch[2], 10);
+          const targetBc = getBoiCanhById(bcId) || boiCanh;
+          const url =
+            targetBc &&
+            Array.isArray(targetBc.nguon) &&
+            oneBasedIdx >= 1 &&
+            oneBasedIdx <= targetBc.nguon.length
+              ? targetBc.nguon[oneBasedIdx - 1]
+              : undefined;
 
-    itemsToEvaluate.forEach((pa) => {
-      evaluateOptionGuardian(pa, true);
-    });
-  }, [phuongAnList, evaluateOptionGuardian]);
+          if (!url) {
+            return (
+              <span
+                key={code}
+                className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+              >
+                [{code}]
+              </span>
+            );
+          }
+
+          let domain = url;
+          try {
+            domain = new URL(url).hostname.replace(/^www\./i, '');
+          } catch {
+            domain = url;
+          }
+
+          return (
+            <a
+              key={code}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1E3F5A] bg-[#EBF2F7] hover:bg-[#DCE8F2] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25 hover:underline inline-flex items-center gap-1 font-medium"
+            >
+              <span>{domain}</span>
+              <ExternalLink className="w-3 h-3 shrink-0" />
+            </a>
+          );
+        })}
+        {otherCodes.map((code) => (
+          <span
+            key={code}
+            className="font-mono font-bold text-[#1E3F5A] bg-[#EBF2F7] px-2 py-0.5 rounded-md border border-[#1E3F5A]/25"
+          >
+            [{code}]
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   const renderPhuongAnSourceItem = (code: string) => {
     // 1. Nguồn từ KB-v3
@@ -819,7 +821,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   const handleSaveLook = () => {
     const enrichedOptions = phuongAnList.map((pa) => ({
       ...pa,
-      guardian: guardianStates[pa.token]?.result,
+      guardian: guardianResult,
     }));
 
     const newLook: SavedLook = {
@@ -917,39 +919,61 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         </div>
       </div>
 
-      {/* Main Result Card */}
-      <div className="heritage-card rounded-3xl overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-0">
-          {/* Left Column: Always Vector SVG */}
-          <div className="md:col-span-5 bg-[#FAF8F3] relative flex flex-col justify-between overflow-hidden p-5 border-b md:border-b-0 md:border-r border-[#DED7C6]">
-            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white text-[#1E3F5A] font-semibold border border-[#DED7C6] shadow-2xs">
-                {levelName}
-              </span>
-              <span className="text-xs text-[#4A5560] font-mono">
-                Minh họa Line-art SVG
-              </span>
+      {/* Main Result Layout: 2 Columns aligned at top, Left Illustration sticky on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Always Vector SVG (Top-aligned & Sticky) */}
+        <aside className="md:col-span-5 md:sticky md:top-20 self-start heritage-card rounded-3xl bg-[#FAF8F3] p-4 sm:p-5 space-y-3.5">
+          <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#EFECE3] flex-wrap">
+            <div>
+              <div className="text-xs font-mono uppercase tracking-wider text-[#6E5D4B]">
+                Minh họa bản phối
+              </div>
+              <div className="font-heritage-display text-sm font-bold text-[#161A1D]">
+                {outfit.ten}
+              </div>
             </div>
-
-            {/* Always SVG Illustration */}
-            <div className="relative aspect-[3/4] w-full flex items-center justify-center overflow-hidden rounded-2xl bg-white border border-[#DED7C6] p-3 shadow-2xs">
-              <OutfitVectorIllustration
-                id={outfit.id}
-                size="lg"
-                className="border-0 bg-transparent w-full h-full"
-                colorSchemeId={customization.colorSchemeId}
-                selectedAccessoryIds={validSelectedAccessoryIds}
-                remixLevel={customization.remixLevel}
-              />
-            </div>
-
-            <div className="mt-3 text-center text-xs text-[#4A5560]">
-              Minh họa vector trung tính line-art theo chuẩn KB-v3
-            </div>
+            <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-white text-[#1E3F5A] font-semibold border border-[#DED7C6] shadow-2xs">
+              {levelName}
+            </span>
           </div>
 
-          {/* Right Column: Detailed Breakdown */}
-          <div className="md:col-span-7 p-5 sm:p-7 flex flex-col justify-between space-y-5">
+          {/* Always SVG Illustration */}
+          <OutfitVectorIllustration
+            id={outfit.id}
+            size="lg"
+            colorSchemeId={customization.colorSchemeId}
+            selectedAccessoryIds={validSelectedAccessoryIds}
+            remixLevel={customization.remixLevel}
+          />
+
+          {/* Compact summary below illustration */}
+          <div className="pt-2.5 border-t border-[#EFECE3] space-y-1.5 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#4A5560]">Bảng màu:</span>
+              <span className="inline-flex items-center gap-1.5 font-semibold text-[#161A1D]">
+                <span
+                  className="w-3 h-3 rounded-full border border-black/15 shrink-0"
+                  style={{ backgroundColor: colorScheme.primaryHex }}
+                  aria-hidden="true"
+                />
+                <span>{colorScheme.name}</span>
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#4A5560]">Bối cảnh:</span>
+              <span className="font-semibold text-[#161A1D]">{boiCanh.ten}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[#4A5560]">Phụ kiện đã chọn:</span>
+              <span className="font-semibold text-[#1E3F5A] font-mono tabular-nums">
+                {validSelectedAccessoryIds.length} mục
+              </span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Column: Detailed Breakdown */}
+        <div className="md:col-span-7 heritage-card rounded-3xl p-5 sm:p-7 flex flex-col justify-between space-y-5">
             <div>
               {/* Header Identity & Hierarchy */}
               <div>
@@ -960,10 +984,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                   <span aria-hidden="true">·</span>
                   <span>Bối cảnh: <strong className="text-[#161A1D]">{boiCanh.ten}</strong></span>
                 </div>
-                <h1
-                  title={getOutfitHoverNote(outfit)}
-                  className="font-heritage-display text-2xl sm:text-3xl font-bold text-[#161A1D] leading-tight"
-                >
+                <h1 className="font-heritage-display text-2xl sm:text-3xl font-bold text-[#161A1D] leading-tight">
                   {resultTitle}
                 </h1>
                 <p className="text-xs sm:text-sm text-[#4A5560] mt-1.5">
@@ -972,29 +993,56 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
               </div>
 
               {/* ĐIỂM NHẤN CHÍNH: Cultural Guardian Focal Panel */}
-              <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-[#F4F7FA] via-[#FAF8F3] to-[#F3EFE4] border-2 border-[#1E3F5A]/25 shadow-xs space-y-2.5">
+              <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-[#F4F7FA] via-[#FAF8F3] to-[#F3EFE4] border-2 border-[#1E3F5A]/25 shadow-xs space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A] flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#1E3F5A]" aria-hidden="true" />
-                    <span>Điểm nhấn thẩm định · Cultural Guardian (KB-v3)</span>
+                    <span>Điểm nhấn thẩm định · Cultural Guardian</span>
                   </span>
-                  <span className="text-xs font-mono text-[#4A5560]">
-                    {outfit.nguon.length} nguồn tư liệu
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-white border border-[#DED7C6] text-[#1E3F5A]">
+                      Mức chắc chắn: {getMucChacChanLabel(guardianResult.do_chac_chan)}
+                    </span>
+                    <GuardianBadge evaluation={guardianEvaluation} />
+                  </div>
                 </div>
-                <GuardianBadge
-                  label={
-                    isLoadingStyle
-                      ? 'Chưa kiểm tra'
-                      : styleError
-                      ? 'Chưa kiểm tra được'
-                      : `Mức chắc chắn: ${getMucChacChanLabel(outfit.muc_chac_chan)}`
-                  }
-                  certaintyLevel={outfit.muc_chac_chan}
-                  sources={sourceDetails}
-                  warnings={outfit.khong_nen_khi_remix}
-                  suggestions={outfit.goi_y_phoi_do}
-                />
+
+                {/* Danh sách ly_do tính đồng bộ ở Frontend */}
+                <div className="space-y-2">
+                  {guardianResult.ly_do.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl bg-white border border-[#DED7C6] space-y-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#FAF7F2] border border-[#DED7C6] text-[#4A5560]">
+                          {getGuardianLoaiLyDoLabel(item.loai)}
+                        </span>
+                      </div>
+                      <p className="text-[#161A1D] leading-relaxed whitespace-pre-line">
+                        {item.noi_dung}
+                      </p>
+                      <div className="pt-1 border-t border-[#F0EBE0] text-xs flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-[#4A5560]">Nguồn:</span>
+                        {renderGuardianLyDoSource(item.ma_nguon)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Gợi ý sửa (goi_y_sua) nếu có */}
+                {guardianResult.goi_y_sua.length > 0 && (
+                  <div className="p-3 rounded-xl bg-[#FDF9F0] border border-[#C88E1B]/35 text-xs space-y-1">
+                    <div className="font-bold text-[#7C4D1B]">Gợi ý điều chỉnh:</div>
+                    <ul className="space-y-1 text-[#5A4630] list-disc list-inside">
+                      {guardianResult.goi_y_sua.map((g, idx) => (
+                        <li key={idx} className="leading-relaxed">
+                          {g}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Detail Tabs */}
@@ -1055,7 +1103,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                               </div>
                               <div className="text-xs text-[#4A5560] mt-0.5">
                                 Tải ảnh trang phục của bạn để AI Vision đối chiếu trực quan với quy chuẩn{' '}
-                                <span title={getOutfitHoverNote(outfit)} className="font-semibold text-[#161A1D]">
+                                <span className="font-semibold text-[#161A1D]">
                                   {outfit.ten}
                                 </span>
                                 .
@@ -1134,7 +1182,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                                   </div>
                                 )}
                                 <p className="text-xs text-[#78261A] mt-1 leading-relaxed">
-                                  Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn lấy trực tiếp từ KB-v3.
+                                  Không thể kiểm tra phương án phối tự động lúc này. Phần cấu tạo và nguồn tư liệu trang phục bên dưới vẫn được giữ nguyên.
                                 </p>
                               </div>
                             </div>
@@ -1179,10 +1227,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                                   <span className="text-xs font-bold text-[#1E3F5A]">
                                     Kết quả thẩm định Cultural Guardian:
                                   </span>
-                                  <GuardianBadge
-                                    evaluation={guardianStates[pa.token] || { status: 'loading' }}
-                                    onRetry={() => evaluateOptionGuardian(pa, true)}
-                                  />
+                                  <GuardianBadge evaluation={guardianEvaluation} />
                                 </div>
 
                                 <p className="text-[#4A5560] leading-relaxed">
@@ -1259,10 +1304,10 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                         )}
                       </div>
 
-                      {/* Đánh giá bối cảnh tĩnh từ boi-canh.json */}
+                      {/* Đánh giá bối cảnh tĩnh */}
                       <div className="pt-4 border-t border-[#DED7C6] space-y-2.5">
                         <div className="text-xs font-bold uppercase tracking-wider text-[#1E3F5A]">
-                          Thông tin bối cảnh từ dữ liệu (boi-canh.json)
+                          Thông tin &amp; lưu ý theo bối cảnh
                         </div>
                         {priorityRecommendation ? (
                           <div className="p-3.5 rounded-xl bg-[#FAF8F3] border border-[#DED7C6] text-xs space-y-1.5">
@@ -1362,7 +1407,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                                 <span className="text-xs text-[#4A5560] shrink-0">
                                   {acc.isAppSuggestion
                                     ? 'Gợi ý của app, không phải sự thật lịch sử'
-                                    : 'Tư liệu KB-v3'}
+                                    : 'Theo tư liệu'}
                                 </span>
                               </div>
                             ))}
@@ -1474,7 +1519,6 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Modal Tìm nơi thuê/mua (B6b) */}
       {rentalModalPa && (

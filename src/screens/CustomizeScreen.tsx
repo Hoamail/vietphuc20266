@@ -10,7 +10,6 @@ import {
   getAccessoriesForGarment,
   GarmentAccessoryOption,
   getMucChacChanLabel,
-  getOutfitHoverNote,
 } from '../data/kb';
 import { BoiCanhMucRemix } from '../types/boiCanh';
 import { RemixCustomization, WeatherCondition } from '../types/vietphuc';
@@ -150,10 +149,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
         <div className="sm:text-right bg-white px-4 py-3 rounded-2xl border border-[#DED7C6] shadow-2xs shrink-0">
           <div className="text-xs text-[#6E5D4B] font-medium">Trang phục đang chọn:</div>
-          <div
-            title={getOutfitHoverNote(outfit)}
-            className="font-heritage-display text-sm sm:text-base font-bold text-[#1E3F5A] mt-0.5"
-          >
+          <div className="font-heritage-display text-sm sm:text-base font-bold text-[#1E3F5A] mt-0.5">
             {outfit.ten}
           </div>
           <div className="text-xs text-[#4A5560] mt-0.5">
@@ -271,9 +267,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 <h2 className="text-sm font-bold uppercase tracking-wider text-[#1E3F5A]">
                   1. Chọn bối cảnh sử dụng
                 </h2>
-                <p className="text-xs text-[#4A5560] mt-0.5">
-                  Dữ liệu bối cảnh từ <span className="font-mono">boi-canh.json</span>
-                </p>
               </div>
               <span className="text-xs text-[#1E3F5A] bg-[#EBF2F7] px-2.5 py-1 rounded-lg border border-[#1E3F5A]/20 font-medium self-start sm:self-auto">
                 Mức chắc chắn bối cảnh: <strong>{getMucChacChanLabel(selectedBoiCanh.muc_chac_chan)}</strong>
@@ -318,10 +311,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
 
           {/* Dưới phần bối cảnh: Khuyến nghị trang phục (nen_uu_tien) & Lưu ý (luu_y) */}
           <div className="heritage-card rounded-2xl p-5 space-y-4">
-            <h3
-              title={getOutfitHoverNote(outfit)}
-              className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D]"
-            >
+            <h3 className="font-heritage-display text-base sm:text-lg font-bold text-[#161A1D]">
               Đối chiếu trang phục &ldquo;{outfit.ten}&rdquo; trong bối cảnh &ldquo;{selectedBoiCanh.ten}&rdquo;
             </h3>
 
@@ -599,9 +589,6 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
               </h2>
               <span className="text-xs text-[#4A5560] font-medium">Chạm để chọn / bỏ chọn</span>
             </div>
-            <p className="text-xs text-[#4A5560] mt-1">
-              Lấy từ mục <span className="font-mono">phu_kien</span> và <span className="font-mono">goi_y_phoi_do</span> của <strong title={getOutfitHoverNote(outfit)} className="text-[#161A1D]">{outfit.ten}</strong>.
-            </p>
           </div>
 
           {accessoryOptions.length === 0 ? (
@@ -645,7 +632,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                         </span>
                       ) : (
                         <span className="text-[#1E3F5A] bg-white/90 border border-[#1E3F5A]/20 px-2 py-0.5 rounded-md font-medium">
-                          Tư liệu KB-v3 (phu_kien)
+                          Theo tư liệu
                         </span>
                       )}
                     </div>
@@ -805,10 +792,7 @@ export const CustomizeScreen: React.FC<CustomizeScreenProps> = ({
                 <div className="text-xs font-mono uppercase tracking-wider text-[#6E5D4B]">
                   Xem trước trực tiếp
                 </div>
-                <div
-                  title={getOutfitHoverNote(outfit)}
-                  className="font-heritage-display text-sm font-bold text-[#161A1D]"
-                >
+                <div className="font-heritage-display text-sm font-bold text-[#161A1D]">
                   {outfit.ten}
                 </div>
               </div>

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, ArrowLeft, ExternalLink, Sparkles, BookOpen, AlertCircle, Info, Check, Shirt } from 'lucide-react';
 import { KBTrangPhuc, KBNguonMap } from '../types/kb';
-import { getOutfitHoverNote } from '../data/kb';
 import { OutfitVectorIllustration } from '../components/OutfitVectorIllustration';
 import { SourceCitationText } from '../components/SourceCitationText';
 
@@ -123,18 +122,8 @@ export const KBOutfitDetailModal: React.FC<KBOutfitDetailModalProps> = ({
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2
-                  title={getOutfitHoverNote(outfit)}
-                  className="relative group/modalname font-heritage-display text-lg sm:text-xl font-bold leading-tight inline-flex items-center gap-1"
-                >
-                  <span className={getOutfitHoverNote(outfit) ? 'underline decoration-dotted decoration-[#8E7E6B] underline-offset-4' : ''}>
-                    {outfit.ten}
-                  </span>
-                  {getOutfitHoverNote(outfit) && (
-                    <span className="pointer-events-none opacity-0 group-hover/modalname:opacity-100 transition-opacity absolute left-0 -bottom-8 z-30 whitespace-nowrap rounded-lg bg-[#161A1D] px-2.5 py-1 font-sans text-xs font-medium text-white shadow-md">
-                      {getOutfitHoverNote(outfit)}
-                    </span>
-                  )}
+                <h2 className="font-heritage-display text-lg sm:text-xl font-bold leading-tight">
+                  {outfit.ten}
                 </h2>
                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-md ${group.color}`}>
                   {group.label}
@@ -164,10 +153,7 @@ export const KBOutfitDetailModal: React.FC<KBOutfitDetailModalProps> = ({
           {/* Neutral SVG Vector Illustration Frame */}
           <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#DED7C6] shadow-2xs">
             <div className="text-xs text-[#4A5560] font-semibold uppercase tracking-wider mb-2.5 flex items-center justify-between flex-wrap gap-2">
-              <span>Minh họa cấu trúc kỹ thuật (Line-art SVG trung tính không bản quyền)</span>
-              <span className="text-xs font-mono text-[#1E3F5A] bg-[#FAF8F3] px-2.5 py-0.5 rounded-md border border-[#DED7C6]">
-                Chuẩn hóa KB-v3
-              </span>
+              <span>Minh họa cấu trúc trang phục</span>
             </div>
             <OutfitVectorIllustration id={outfit.id} size="lg" />
           </div>

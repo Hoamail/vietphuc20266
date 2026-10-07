@@ -13,19 +13,6 @@ export function getTrangPhucById(id: string): KBTrangPhuc | undefined {
   return KB_TRANG_PHUC.find((item) => item.id === id);
 }
 
-export function getOutfitHoverNote(
-  outfit?: { id?: string; ghi_chu_ten?: string } | null
-): string | undefined {
-  if (!outfit) return undefined;
-  if (typeof outfit.ghi_chu_ten === 'string' && outfit.ghi_chu_ten.trim()) {
-    return outfit.ghi_chu_ten.trim();
-  }
-  if (outfit.id === 'ao_dai_tan_thoi') {
-    return 'Áo dài hiện đại';
-  }
-  return undefined;
-}
-
 export function getBoiCanhById(id: string): BoiCanhItem | undefined {
   return BOI_CANH.find((item) => item.id === id);
 }
